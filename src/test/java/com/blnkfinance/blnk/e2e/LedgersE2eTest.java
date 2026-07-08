@@ -128,12 +128,14 @@ class LedgersE2eTest {
 
   @Test
   @Order(4)
-  @DisplayName("It should return 400")
-  void ledgerGetReturns400() {
+  @DisplayName("It should reject an unknown ledger id")
+  void ledgerGetRejectsUnknownId() {
     ApiResponse<JsonNode> response = client.ledgers().get("123456789");
 
     assertNotNull(response, "response is returned");
-    assertEquals(400, response.status());
+    // Blnk Core returns 400 on older versions and 404 on newer ones.
+    assertTrue(response.status() == 400 || response.status() == 404,
+        "expected 400 or 404, got " + response.status());
   }
 
   // --- Identity ---
@@ -257,12 +259,14 @@ class LedgersE2eTest {
 
   @Test
   @Order(11)
-  @DisplayName("it should return 400")
-  void balanceGetReturns400() {
+  @DisplayName("it should reject an unknown balance id")
+  void balanceGetRejectsUnknownId() {
     ApiResponse<JsonNode> response = client.ledgerBalances().get("123456789");
 
     assertNotNull(response, "response is returned");
-    assertEquals(400, response.status());
+    // Blnk Core returns 400 on older versions and 404 on newer ones.
+    assertTrue(response.status() == 400 || response.status() == 404,
+        "expected 400 or 404, got " + response.status());
   }
 
   // --- Ledger balance transactions ---
@@ -374,7 +378,9 @@ class LedgersE2eTest {
     ApiResponse<JsonNode> response = client.balanceMonitor().get("123456789");
 
     assertNotNull(response, "response is returned");
-    assertEquals(400, response.status());
+    // Blnk Core returns 400 on older versions and 404 on newer ones.
+    assertTrue(response.status() == 400 || response.status() == 404,
+        "expected 400 or 404, got " + response.status());
   }
 
   @Test
