@@ -39,7 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class LedgersE2eTest {
 
   private static final Blnk client =
-      Blnk.init("", BlnkClientOptions.builder().baseUrl(TestUtils.BASE_URL).build());
+      Blnk.init(
+          TestUtils.BLNK_API_KEY,
+          BlnkClientOptions.builder().baseUrl(TestUtils.BASE_URL).build());
 
   private static String ledgerId = "";
   private static String ledgerBalanceId = "";

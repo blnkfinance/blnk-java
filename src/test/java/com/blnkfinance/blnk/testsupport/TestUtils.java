@@ -9,8 +9,14 @@ public final class TestUtils {
 
   private TestUtils() {}
 
-  /** Base URL of the live Blnk Core instance used by the integration/e2e suites. */
-  public static final String BASE_URL = "http://localhost:5001/";
+  /**
+   * Base URL of the live Blnk Core instance used by the integration/e2e suites
+   * ({@code BLNK_BASE_URL} env override; defaults to a local instance).
+   */
+  public static final String BASE_URL =
+      System.getenv("BLNK_BASE_URL") != null
+          ? System.getenv("BLNK_BASE_URL")
+          : "http://localhost:5001/";
 
   /** Integration API key ({@code BLNK_API_KEY} env override; defaults to the local dev secret). */
   public static final String BLNK_API_KEY =
