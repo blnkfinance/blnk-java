@@ -7,7 +7,7 @@ import java.util.Map;
 
 /**
  * Options for {@code GET balances/{balance_id}}. Never sent as a body:
- * {@code from_source} only toggles the {@code ?from_source=true} query flag.
+ * {@code from_source} and {@code with_queued} toggle query flags only.
  */
 public final class GetBalanceRequest {
 
@@ -22,6 +22,12 @@ public final class GetBalanceRequest {
   /** Optional boolean flag; typed {@code Object} so non-boolean values remain representable. */
   public GetBalanceRequest fromSource(Object fromSource) {
     fields.put("from_source", fromSource);
+    return this;
+  }
+
+  /** Optional boolean flag; typed {@code Object} so non-boolean values remain representable. */
+  public GetBalanceRequest withQueued(Object withQueued) {
+    fields.put("with_queued", withQueued);
     return this;
   }
 

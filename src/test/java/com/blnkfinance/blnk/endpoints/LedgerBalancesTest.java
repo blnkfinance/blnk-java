@@ -427,6 +427,44 @@ class LedgerBalancesTest {
   }
 
   @Test
+  @DisplayName("get forwards with_queued query param")
+  void getForwardsWithQueuedQueryParam() {
+    BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    LedgerBalances ledgerBalance = service(capturedRequest);
+    String balanceId = "bln_5ce86029-3c2e-4e2a-aae2-7fb931ca4c4f";
+
+    ledgerBalance.get(balanceId, GetBalanceRequest.create().withQueued(true));
+
+    assertEquals(
+        List.of(
+            new CapturingRequest.Call(
+                "balances/" + balanceId + "?with_queued=true", null, "GET", null)),
+        capturedRequest.calls);
+  }
+
+  @Test
+  @DisplayName("get forwards from_source and with_queued query params")
+  void getForwardsFromSourceAndWithQueuedQueryParams() {
+    BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    LedgerBalances ledgerBalance = service(capturedRequest);
+    String balanceId = "bln_5ce86029-3c2e-4e2a-aae2-7fb931ca4c4f";
+
+    ledgerBalance.get(
+        balanceId, GetBalanceRequest.create().fromSource(true).withQueued(true));
+
+    assertEquals(
+        List.of(
+            new CapturingRequest.Call(
+                "balances/" + balanceId + "?from_source=true&with_queued=true",
+                null,
+                "GET",
+                null)),
+        capturedRequest.calls);
+  }
+
+  @Test
   @DisplayName("get rejects invalid from_source")
   void getRejectsInvalidFromSource() {
     BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
@@ -439,6 +477,21 @@ class LedgerBalancesTest {
     assertEquals(List.of(), capturedRequest.calls);
     assertEquals(400, response.status());
     assertEquals("from_source must be a boolean if provided", response.message());
+  }
+
+  @Test
+  @DisplayName("get rejects invalid with_queued")
+  void getRejectsInvalidWithQueued() {
+    BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    LedgerBalances ledgerBalance = service(capturedRequest);
+
+    ApiResponse<JsonNode> response =
+        ledgerBalance.get("bln_123", GetBalanceRequest.create().withQueued("true"));
+
+    assertEquals(List.of(), capturedRequest.calls);
+    assertEquals(400, response.status());
+    assertEquals("with_queued must be a boolean if provided", response.message());
   }
 
   @Test
