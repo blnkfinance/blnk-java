@@ -64,9 +64,9 @@ public class LedgerBalances {
   }
 
   /**
-   * Retrieves a balance — {@code GET balances/{id}}, plus the literal
-   * {@code ?from_source=true} when {@code options.from_source} is set. Note:
-   * the {@code id} is never validated ({@code get("")} performs
+   * Retrieves a balance — {@code GET balances/{id}}, plus query flags when
+   * {@code options.from_source} and/or {@code options.with_queued} are set.
+   * Note: the {@code id} is never validated ({@code get("")} performs
    * {@code GET balances/}) and is spliced into the path with NO URL-encoding.
    * Options validation runs only when options are provided ({@code null}
    * means "no options"). No body.
@@ -82,10 +82,17 @@ public class LedgerBalances {
       }
 
       String endpoint = "balances/" + id;
-      // Only a true from_source reaches this point (the validator forces a
-      // boolean); false appends nothing.
-      if (optionsMap != null && ValueFormat.isTruthy(optionsMap.get("from_source"))) {
-        endpoint += "?from_source=true";
+      if (optionsMap != null) {
+        java.util.List<String> params = new java.util.ArrayList<>();
+        if (ValueFormat.isTruthy(optionsMap.get("from_source"))) {
+          params.add("from_source=true");
+        }
+        if (ValueFormat.isTruthy(optionsMap.get("with_queued"))) {
+          params.add("with_queued=true");
+        }
+        if (!params.isEmpty()) {
+          endpoint += "?" + String.join("&", params);
+        }
       }
 
       return request.call(endpoint, null, "GET", null);

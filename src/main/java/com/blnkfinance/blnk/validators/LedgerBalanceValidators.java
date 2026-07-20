@@ -146,6 +146,10 @@ public final class LedgerBalanceValidators {
       return "from_source must be a boolean if provided";
     }
 
+    if (data.containsKey("with_queued") && !(data.get("with_queued") instanceof Boolean)) {
+      return "with_queued must be a boolean if provided";
+    }
+
     return null;
   }
 

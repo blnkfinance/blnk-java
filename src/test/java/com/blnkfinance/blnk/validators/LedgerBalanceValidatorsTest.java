@@ -175,6 +175,23 @@ class LedgerBalanceValidatorsTest {
     }
 
     @Test
+    @DisplayName("accepts with_queued flag")
+    void acceptsWithQueuedFlag() {
+      Map<String, Object> data = new LinkedHashMap<>();
+      data.put("with_queued", true);
+      assertNull(LedgerBalanceValidators.validateGetBalance(data));
+    }
+
+    @Test
+    @DisplayName("accepts from_source and with_queued flags")
+    void acceptsFromSourceAndWithQueuedFlags() {
+      Map<String, Object> data = new LinkedHashMap<>();
+      data.put("from_source", true);
+      data.put("with_queued", true);
+      assertNull(LedgerBalanceValidators.validateGetBalance(data));
+    }
+
+    @Test
     @DisplayName("accepts empty options object")
     void acceptsEmptyOptionsObject() {
       assertNull(LedgerBalanceValidators.validateGetBalance(new LinkedHashMap<>()));
@@ -187,6 +204,16 @@ class LedgerBalanceValidatorsTest {
       data.put("from_source", "true");
       assertEquals(
           "from_source must be a boolean if provided",
+          LedgerBalanceValidators.validateGetBalance(data));
+    }
+
+    @Test
+    @DisplayName("rejects non-boolean with_queued")
+    void rejectsNonBooleanWithQueued() {
+      Map<String, Object> data = new LinkedHashMap<>();
+      data.put("with_queued", "true");
+      assertEquals(
+          "with_queued must be a boolean if provided",
           LedgerBalanceValidators.validateGetBalance(data));
     }
   }
