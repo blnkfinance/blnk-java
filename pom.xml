@@ -11,12 +11,39 @@
 
   <name>Blnk SDK for Java</name>
   <description>Java SDK for the Blnk Finance open-source ledger.</description>
+  <url>https://github.com/blnkfinance/blnk-java</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <name>Blnk Finance</name>
+      <email>emmanuella.etop-essien@blnkfinance.com</email>
+      <organization>Blnk Finance</organization>
+      <organizationUrl>https://blnkfinance.com</organizationUrl>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/blnkfinance/blnk-java.git</connection>
+    <developerConnection>scm:git:ssh://github.com:blnkfinance/blnk-java.git</developerConnection>
+    <url>https://github.com/blnkfinance/blnk-java</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <properties>
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jackson.version>2.17.2</jackson.version>
     <junit.version>5.10.3</junit.version>
+    <!-- Default GPG key id for Blnk Finance Maven signing; override with -Dgpg.keyname=... -->
+    <gpg.keyname>2DEE5B3513DF2BF0</gpg.keyname>
   </properties>
 
   <dependencies>
@@ -50,4 +77,90 @@
       </plugin>
     </plugins>
   </build>
+
+  <!--
+    Activate for Maven Central publishes:
+      mvn -Prelease clean verify
+      mvn -Prelease clean deploy
+
+    Requires:
+      - GPG key available locally (see gpg.keyname)
+      - ~/.m2/settings.xml server id "central" with a Sonatype user token
+  -->
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.3.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.11.2</version>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <doclint>none</doclint>
+              <failOnError>false</failOnError>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.7</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <keyname>${gpg.keyname}</keyname>
+              <!-- Prefer pinentry loopback when prompted non-interactively -->
+              <gpgArguments>
+                <arg>--pinentry-mode</arg>
+                <arg>loopback</arg>
+              </gpgArguments>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.9.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <!-- First publish: validate in Portal UI, then click Publish manually -->
+              <autoPublish>false</autoPublish>
+              <waitUntil>validated</waitUntil>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
