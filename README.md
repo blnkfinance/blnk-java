@@ -12,13 +12,7 @@ search, metadata, hooks, API keys, and system health.
 
 ## Installation
 
-Build and install into your local repository:
-
-```sh
-mvn install
-```
-
-Then add the dependency:
+Available on [Maven Central](https://central.sonatype.com/artifact/com.blnkfinance/blnk-sdk):
 
 ```xml
 <dependency>
@@ -28,8 +22,20 @@ Then add the dependency:
 </dependency>
 ```
 
+Gradle:
+
+```kotlin
+implementation("com.blnkfinance:blnk-sdk:1.3.0")
+```
+
 The only runtime dependency is Jackson Databind; HTTP uses the JDK's built-in
 `java.net.http.HttpClient`.
+
+To build from source:
+
+```sh
+mvn install
+```
 
 ## Quickstart
 
