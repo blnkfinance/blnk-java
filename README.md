@@ -12,12 +12,12 @@ search, metadata, hooks, API keys, and system health.
 
 ## Installation
 
-Available on [Maven Central](https://central.sonatype.com/artifact/com.blnkfinance/blnk-sdk):
+Available on [Maven Central](https://central.sonatype.com/artifact/com.blnkfinance/blnk-java):
 
 ```xml
 <dependency>
   <groupId>com.blnkfinance</groupId>
-  <artifactId>blnk-sdk</artifactId>
+  <artifactId>blnk-java</artifactId>
   <version>1.3.0</version>
 </dependency>
 ```
@@ -25,7 +25,7 @@ Available on [Maven Central](https://central.sonatype.com/artifact/com.blnkfinan
 Gradle:
 
 ```kotlin
-implementation("com.blnkfinance:blnk-sdk:1.3.0")
+implementation("com.blnkfinance:blnk-java:1.3.0")
 ```
 
 The only runtime dependency is Jackson Databind; HTTP uses the JDK's built-in

@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.blnkfinance</groupId>
-  <artifactId>blnk-sdk</artifactId>
+  <artifactId>blnk-java</artifactId>
   <version>1.3.0</version>
   <packaging>jar</packaging>
 
