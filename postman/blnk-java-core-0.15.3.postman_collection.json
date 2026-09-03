@@ -17,6 +17,7 @@
     { "key": "apiKey", "value": "blnk-local-dev-secret-change-me" },
     { "key": "ledgerId", "value": "" },
     { "key": "balanceId", "value": "" },
+    { "key": "eurBalanceId", "value": "" },
     { "key": "indicator", "value": "" },
     { "key": "appliedTxnId", "value": "" },
     { "key": "inflightTxnId", "value": "" },
@@ -75,6 +76,32 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"ledger_id\": \"{{ledgerId}}\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": "{{baseUrl}}/balances"
+          }
+        },
+        {
+          "name": "Create EUR balance (for currency-mismatch notes)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('balance created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('eurBalanceId', body.balance_id);",
+                  "pm.test('balance_id present', () => pm.expect(body.balance_id).to.include('bln_'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ledger_id\": \"{{ledgerId}}\",\n  \"currency\": \"EUR\"\n}"
             },
             "url": "{{baseUrl}}/balances"
           }
@@ -167,6 +194,33 @@
           }
         },
         {
+          "name": "Dry-run create surfaces notes (currency mismatch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('would_apply true (a note is not a rejection)', () => pm.expect(body.would_apply).to.eql(true));",
+                  "pm.test('notes is a non-empty array', () => pm.expect(body.notes).to.be.an('array').that.is.not.empty);",
+                  "pm.test('notes mention the currency mismatch', () => pm.expect(body.notes.join(' ')).to.include('currency mismatch'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dry_run\": true,\n  \"amount\": 10,\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"reference\": \"pm-dry-notes-{{$timestamp}}\",\n  \"description\": \"Postman dry-run notes\",\n  \"source\": \"@FundingPool\",\n  \"destination\": \"{{eurBalanceId}}\",\n  \"allow_overdraft\": true\n}"
+            },
+            "url": "{{baseUrl}}/transactions"
+          }
+        },
+        {
           "name": "Dry-run bulk create",
           "event": [
             {
@@ -177,7 +231,8 @@
                   "const body = pm.response.json();",
                   "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
                   "pm.test('dry_run true', () => pm.expect(body.dry_run).to.eql(true));",
-                  "pm.test('results present', () => pm.expect(body.results || body.transactions).to.be.an('array'));"
+                  "pm.test('results present', () => pm.expect(body.results || body.transactions).to.be.an('array'));",
+                  "pm.test('batch-level notes is a non-empty array', () => pm.expect(body.notes).to.be.an('array').that.is.not.empty);"
                 ]
               }
             }

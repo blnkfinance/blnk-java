@@ -64,6 +64,20 @@ public final class DryRunBulkTransactionResponse {
     return node != null && node.isBoolean() ? node.booleanValue() : null;
   }
 
+  public Boolean atomic() {
+    JsonNode node = json.isObject() ? json.get("atomic") : null;
+    return node != null && node.isBoolean() ? node.booleanValue() : null;
+  }
+
+  /**
+   * Batch-level advisories, for example the warning that items are dispatched
+   * concurrently and projected independently. Per-item notes stay on the
+   * matching {@link DryRunTransactionResponse}.
+   */
+  public List<String> notes() {
+    return DryRunTransactionResponse.notesOf(json.isObject() ? json : null);
+  }
+
   public List<DryRunTransactionResponse> transactions() {
     return transactions;
   }

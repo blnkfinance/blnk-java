@@ -107,13 +107,42 @@ public final class DryRunTransactionResponse {
   }
 
   /** Split-leg projections when the request used multiple sources or destinations. */
-  public JsonNode legs() {
-    return json.get("legs");
+  public List<DryRunLegProjection> legs() {
+    JsonNode node = json.get("legs");
+    if (node == null || !node.isArray()) {
+      return Collections.emptyList();
+    }
+    List<DryRunLegProjection> legs = new ArrayList<>();
+    for (JsonNode item : node) {
+      DryRunLegProjection leg = DryRunLegProjection.fromJson(item);
+      if (leg != null) {
+        legs.add(leg);
+      }
+    }
+    return Collections.unmodifiableList(legs);
   }
 
-  /** Advisory messages that are not rejections. */
-  public JsonNode advisories() {
-    return json.get("advisories");
+  /**
+   * Advisory messages that are not rejections, for example a currency mismatch
+   * or legs being queued for independent async processing. A preview can carry
+   * notes while {@code would_apply} is still {@code true}.
+   */
+  public List<String> notes() {
+    return notesOf(json);
+  }
+
+  static List<String> notesOf(JsonNode json) {
+    JsonNode node = json == null ? null : json.get("notes");
+    if (node == null || !node.isArray()) {
+      return Collections.emptyList();
+    }
+    List<String> notes = new ArrayList<>();
+    for (JsonNode item : node) {
+      if (item != null && !item.isNull()) {
+        notes.add(item.asText());
+      }
+    }
+    return Collections.unmodifiableList(notes);
   }
 
   private String text(String field) {

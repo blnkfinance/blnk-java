@@ -107,6 +107,9 @@ if (Boolean.TRUE.equals(dryRun.wouldApply())) {
 } else {
     System.out.println("rejected: " + dryRun.rejection().code());
 }
+
+// Advisories such as a currency mismatch arrive even when would_apply is true.
+dryRun.notes().forEach(note -> System.out.println("note: " + note));
 ```
 
 Create an internal General Ledger balance:

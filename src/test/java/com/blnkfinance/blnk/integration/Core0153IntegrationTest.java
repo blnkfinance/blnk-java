@@ -14,7 +14,9 @@ import com.blnkfinance.blnk.types.CreateLedger;
 import com.blnkfinance.blnk.types.CreateLedgerBalance;
 import com.blnkfinance.blnk.types.CreateTransactions;
 import com.blnkfinance.blnk.types.DryRunBulkTransactionResponse;
+import com.blnkfinance.blnk.types.DryRunLegProjection;
 import com.blnkfinance.blnk.types.DryRunTransactionResponse;
+import com.blnkfinance.blnk.types.MultipleSourcesT;
 import com.blnkfinance.blnk.types.RefundTransactionRequest;
 import com.blnkfinance.blnk.types.UpdateTransactionStatus;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,6 +27,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -59,10 +62,14 @@ class Core0153IntegrationTest {
   }
 
   private static String createBalance(String ledgerId) {
+    return createBalance(ledgerId, "USD");
+  }
+
+  private static String createBalance(String ledgerId, String currency) {
     ApiResponse<JsonNode> response =
         client
             .ledgerBalances()
-            .create(CreateLedgerBalance.create().currency("USD").ledgerId(ledgerId));
+            .create(CreateLedgerBalance.create().currency(currency).ledgerId(ledgerId));
     assertEquals(201, response.status(), "balance create: " + response.message());
     return response.data().get("balance_id").asText();
   }
@@ -179,6 +186,95 @@ class Core0153IntegrationTest {
 
     assertNotEquals(200, client.transactions().getByReference(ref1).status());
     assertNotEquals(200, client.transactions().getByReference(ref2).status());
+  }
+
+  @Test
+  @DisplayName("dry-run surfaces a currency-mismatch note while still applying")
+  void dryRunSurfacesCurrencyMismatchNote() {
+    String ledgerId = createLedger("0.15.3 Dry-run notes");
+    String destination = createBalance(ledgerId, "EUR");
+
+    ApiResponse<JsonNode> preview =
+        client
+            .transactions()
+            .create(
+                baseTxn()
+                    .amount(10)
+                    .reference(TestUtils.generateRandomNumbersWithPrefix("dry-run-notes", 8))
+                    .source("@FundingPool")
+                    .destination(destination)
+                    .dryRun(true));
+
+    assertEquals(200, preview.status(), preview.message());
+    DryRunTransactionResponse dryRun = DryRunTransactionResponse.fromJson(preview.data());
+    assertEquals(true, dryRun.wouldApply(), "currency mismatch is a note, not a rejection");
+    assertFalse(dryRun.notes().isEmpty(), "expected a note on the preview: " + preview.data());
+    assertTrue(
+        dryRun.notes().stream().anyMatch(note -> note.contains("currency mismatch")),
+        "notes: " + dryRun.notes());
+  }
+
+  @Test
+  @DisplayName("dry-run bulk surfaces the batch-level independent-projection note")
+  void dryRunBulkSurfacesBatchLevelNote() {
+    String destination = createBalance(createLedger("0.15.3 Dry-run bulk notes"));
+
+    ApiResponse<JsonNode> preview =
+        client
+            .transactions()
+            .createBulk(
+                BulkTransactions.create()
+                    .dryRun(true)
+                    .transactions(
+                        List.of(
+                            baseTxn()
+                                .amount(10)
+                                .reference(
+                                    TestUtils.generateRandomNumbersWithPrefix("dry-bulk-note", 8))
+                                .source("@FundingPool")
+                                .destination(destination))));
+
+    assertEquals(200, preview.status(), preview.message());
+    DryRunBulkTransactionResponse bulk = DryRunBulkTransactionResponse.fromJson(preview.data());
+    assertFalse(bulk.notes().isEmpty(), "expected a batch-level note: " + preview.data());
+    assertTrue(
+        bulk.notes().stream().anyMatch(note -> note.contains("projected independently")),
+        "batch notes: " + bulk.notes());
+  }
+
+  @Test
+  @DisplayName("dry-run projects split legs for a multi-destination transaction")
+  void dryRunProjectsSplitLegs() {
+    String ledgerId = createLedger("0.15.3 Dry-run legs");
+    String first = createBalance(ledgerId);
+    String second = createBalance(ledgerId);
+
+    ApiResponse<JsonNode> preview =
+        client
+            .transactions()
+            .create(
+                baseTxn()
+                    .amount(100)
+                    .reference(TestUtils.generateRandomNumbersWithPrefix("dry-run-legs", 8))
+                    .source("@FundingPool")
+                    .destinations(
+                        List.of(
+                            MultipleSourcesT.create().identifier(first).distribution("60%"),
+                            MultipleSourcesT.create().identifier(second).distribution("left")))
+                    .dryRun(true));
+
+    assertEquals(200, preview.status(), preview.message());
+    DryRunTransactionResponse dryRun = DryRunTransactionResponse.fromJson(preview.data());
+    assertEquals(2, dryRun.legs().size(), "legs: " + preview.data());
+    // Leg order is not guaranteed, so match on the identifier.
+    Map<String, DryRunLegProjection> legs =
+        dryRun.legs().stream()
+            .collect(Collectors.toMap(DryRunLegProjection::identifier, leg -> leg));
+    assertEquals(60.0, legs.get(first).amount());
+    assertEquals("6000", legs.get(first).preciseAmount());
+    assertEquals("destination", legs.get(first).role());
+    assertEquals(40.0, legs.get(second).amount());
+    assertEquals("4000", legs.get(second).preciseAmount());
   }
 
   @Test

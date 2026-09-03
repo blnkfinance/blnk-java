@@ -85,9 +85,6 @@ public final class DryRunBalanceProjection {
 
   private String text(String field) {
     JsonNode node = json.get(field);
-    if (node == null || node.isNull()) {
-      return null;
-    }
-    return node.isTextual() ? node.asText() : node.asText();
+    return node == null || node.isNull() ? null : node.asText();
   }
 }
