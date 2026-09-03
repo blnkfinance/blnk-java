@@ -64,6 +64,21 @@ public final class LedgerBalanceValidators {
       return "allocation_strategy must be one of FIFO, LIFO, or PROPORTIONAL";
     }
 
+    if (data.containsKey("indicator")) {
+      if (!StringUtils.isValidString(data.get("indicator"))) {
+        return "indicator must be a valid string if provided";
+      }
+      String indicator = (String) data.get("indicator");
+      if (indicator.isEmpty()
+          || !indicator.startsWith("@")
+          || indicator.chars().anyMatch(Character::isWhitespace)) {
+        return "indicator must start with @ and contain no whitespace";
+      }
+      if (!"general_ledger_id".equals(data.get("ledger_id"))) {
+        return "indicator is only valid when ledger_id is general_ledger_id";
+      }
+    }
+
     // If all validations pass, return null.
     return null;
   }

@@ -1,0 +1,597 @@
+{
+  "info": {
+    "name": "Blnk Java SDK — Core 0.15.3",
+    "description": "Manual checks for the Java SDK 1.4.0 / Core 0.15.3 work: dry-run, internal balances, refund extras, hooks list, and validation errors.\n\nSet `baseUrl` (default http://localhost:5001) and `apiKey`. Run the collection in folder order so setup seeds `ledgerId`, `balanceId`, and later transaction ids.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      { "key": "key", "value": "X-Blnk-Key", "type": "string" },
+      { "key": "value", "value": "{{apiKey}}", "type": "string" },
+      { "key": "in", "value": "header", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5001" },
+    { "key": "apiKey", "value": "blnk-local-dev-secret-change-me" },
+    { "key": "ledgerId", "value": "" },
+    { "key": "balanceId", "value": "" },
+    { "key": "indicator", "value": "" },
+    { "key": "appliedTxnId", "value": "" },
+    { "key": "inflightTxnId", "value": "" },
+    { "key": "inflightTxnId2", "value": "" },
+    { "key": "dryRunRef", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0. Setup",
+      "item": [
+        {
+          "name": "Create ledger",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ledger created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('ledgerId', body.ledger_id);",
+                  "pm.test('ledger_id present', () => pm.expect(body.ledger_id).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SDK 0.15.3 Postman {{$timestamp}}\"\n}"
+            },
+            "url": "{{baseUrl}}/ledgers"
+          }
+        },
+        {
+          "name": "Create customer balance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('balance created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('balanceId', body.balance_id);",
+                  "pm.test('balance_id present', () => pm.expect(body.balance_id).to.include('bln_'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ledger_id\": \"{{ledgerId}}\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": "{{baseUrl}}/balances"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Dry-run transactions",
+      "item": [
+        {
+          "name": "Dry-run create (would_apply true)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('dryRunRef', 'pm-dry-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('dry_run true', () => pm.expect(body.dry_run).to.eql(true));",
+                  "pm.test('would_apply true', () => pm.expect(body.would_apply).to.eql(true));",
+                  "pm.test('no transaction_id', () => pm.expect(body.transaction_id).to.be.undefined);",
+                  "pm.test('balances projected', () => pm.expect(body.balances).to.be.an('array').that.is.not.empty);",
+                  "pm.test('precise_amount string', () => pm.expect(body.precise_amount).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dry_run\": true,\n  \"amount\": 25,\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"reference\": \"{{dryRunRef}}\",\n  \"description\": \"Postman dry-run create\",\n  \"source\": \"@FundingPool\",\n  \"destination\": \"{{balanceId}}\",\n  \"allow_overdraft\": true\n}"
+            },
+            "url": "{{baseUrl}}/transactions"
+          }
+        },
+        {
+          "name": "Confirm dry-run did not consume reference",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('reference unused', () => pm.expect(pm.response.code).to.not.eql(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions/reference/{{dryRunRef}}"
+          }
+        },
+        {
+          "name": "Dry-run create (would_apply false)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('HTTP 200 not 4xx', () => pm.response.to.have.status(200));",
+                  "pm.test('would_apply false', () => pm.expect(body.would_apply).to.eql(false));",
+                  "pm.test('rejection.code present', () => pm.expect(body.rejection.code).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dry_run\": true,\n  \"amount\": 50,\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"reference\": \"pm-dry-reject-{{$timestamp}}\",\n  \"description\": \"Should not overdraft\",\n  \"source\": \"{{balanceId}}\",\n  \"destination\": \"@FundingPool\",\n  \"allow_overdraft\": false\n}"
+            },
+            "url": "{{baseUrl}}/transactions"
+          }
+        },
+        {
+          "name": "Dry-run bulk create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('dry_run true', () => pm.expect(body.dry_run).to.eql(true));",
+                  "pm.test('results present', () => pm.expect(body.results || body.transactions).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dry_run\": true,\n  \"transactions\": [\n    {\n      \"amount\": 10,\n      \"precision\": 100,\n      \"currency\": \"USD\",\n      \"reference\": \"pm-dry-bulk-a-{{$timestamp}}\",\n      \"description\": \"Bulk dry-run A\",\n      \"source\": \"@FundingPool\",\n      \"destination\": \"{{balanceId}}\",\n      \"allow_overdraft\": true\n    },\n    {\n      \"amount\": 15,\n      \"precision\": 100,\n      \"currency\": \"USD\",\n      \"reference\": \"pm-dry-bulk-b-{{$timestamp}}\",\n      \"description\": \"Bulk dry-run B\",\n      \"source\": \"@FundingPool\",\n      \"destination\": \"{{balanceId}}\",\n      \"allow_overdraft\": true\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/transactions/bulk"
+          }
+        },
+        {
+          "name": "Create applied transaction (for refund dry-run)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('applied', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('appliedTxnId', body.transaction_id);",
+                  "pm.test('status APPLIED', () => pm.expect(body.status).to.eql('APPLIED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 80,\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"reference\": \"pm-applied-{{$timestamp}}\",\n  \"description\": \"Source for refund dry-run\",\n  \"source\": \"@FundingPool\",\n  \"destination\": \"{{balanceId}}\",\n  \"allow_overdraft\": true,\n  \"skip_queue\": true\n}"
+            },
+            "url": "{{baseUrl}}/transactions"
+          }
+        },
+        {
+          "name": "Dry-run refund",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('dry_run true', () => pm.expect(body.dry_run).to.eql(true));",
+                  "pm.test('would_apply true', () => pm.expect(body.would_apply).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dry_run\": true,\n  \"description\": \"Preview refund\",\n  \"meta_data\": { \"channel\": \"postman\" }\n}"
+            },
+            "url": "{{baseUrl}}/refund-transaction/{{appliedTxnId}}"
+          }
+        },
+        {
+          "name": "Create inflight transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('inflight created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('inflightTxnId', body.transaction_id);",
+                  "pm.test('INFLIGHT', () => pm.expect(body.status).to.eql('INFLIGHT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 40,\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"reference\": \"pm-inflight-{{$timestamp}}\",\n  \"description\": \"Inflight for dry-run commit\",\n  \"source\": \"@FundingPool\",\n  \"destination\": \"{{balanceId}}\",\n  \"allow_overdraft\": true,\n  \"inflight\": true,\n  \"skip_queue\": true\n}"
+            },
+            "url": "{{baseUrl}}/transactions"
+          }
+        },
+        {
+          "name": "Dry-run inflight commit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('dry_run true', () => pm.expect(body.dry_run).to.eql(true));",
+                  "pm.test('operation commit when present', () => {",
+                  "  if (body.operation) pm.expect(body.operation).to.eql('commit');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"commit\",\n  \"dry_run\": true\n}"
+            },
+            "url": "{{baseUrl}}/transactions/inflight/{{inflightTxnId}}"
+          }
+        },
+        {
+          "name": "Confirm inflight still INFLIGHT after dry-run commit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('still INFLIGHT', () => pm.expect(pm.response.json().status).to.eql('INFLIGHT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/transactions/{{inflightTxnId}}"
+          }
+        },
+        {
+          "name": "Dry-run bulk commit inflight",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dry_run\": true,\n  \"transactions\": [{ \"transaction_id\": \"{{inflightTxnId}}\" }]\n}"
+            },
+            "url": "{{baseUrl}}/transactions/inflight/bulk/commit"
+          }
+        },
+        {
+          "name": "Create second inflight (for void dry-run)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('inflightTxnId2', pm.response.json().transaction_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 20,\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"reference\": \"pm-inflight2-{{$timestamp}}\",\n  \"description\": \"Inflight for dry-run void\",\n  \"source\": \"@FundingPool\",\n  \"destination\": \"{{balanceId}}\",\n  \"allow_overdraft\": true,\n  \"inflight\": true,\n  \"skip_queue\": true\n}"
+            },
+            "url": "{{baseUrl}}/transactions"
+          }
+        },
+        {
+          "name": "Dry-run bulk void inflight",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dry_run\": true,\n  \"transaction_ids\": [\"{{inflightTxnId2}}\"]\n}"
+            },
+            "url": "{{baseUrl}}/transactions/inflight/bulk/void"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Internal balances",
+      "item": [
+        {
+          "name": "Create @indicator on general_ledger_id",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('indicator', '@PmRev' + Date.now().toString().slice(-8));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('created', () => pm.response.to.have.status(201));",
+                  "pm.test('indicator echoed', () => pm.expect(body.indicator).to.eql(pm.collectionVariables.get('indicator')));",
+                  "pm.test('general ledger', () => pm.expect(body.ledger_id).to.eql('general_ledger_id'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ledger_id\": \"general_ledger_id\",\n  \"currency\": \"USD\",\n  \"indicator\": \"{{indicator}}\"\n}"
+            },
+            "url": "{{baseUrl}}/balances"
+          }
+        },
+        {
+          "name": "Duplicate indicator returns GEN_CONFLICT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('409', () => pm.response.to.have.status(409));",
+                  "pm.test('GEN_CONFLICT', () => pm.expect(body.error_detail.code).to.eql('GEN_CONFLICT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ledger_id\": \"general_ledger_id\",\n  \"currency\": \"USD\",\n  \"indicator\": \"{{indicator}}\"\n}"
+            },
+            "url": "{{baseUrl}}/balances"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Refund description and meta_data",
+      "item": [
+        {
+          "name": "Refund with description and meta_data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('refund created', () => pm.response.to.have.status(201));",
+                  "pm.test('description applied', () => pm.expect(body.description).to.eql('SDK refund narration'));",
+                  "pm.test('meta merged', () => pm.expect(body.meta_data.channel).to.eql('postman'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skip_queue\": true,\n  \"description\": \"SDK refund narration\",\n  \"meta_data\": { \"channel\": \"postman\" }\n}"
+            },
+            "url": "{{baseUrl}}/refund-transaction/{{appliedTxnId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Hooks list without type",
+      "item": [
+        {
+          "name": "Create PRE hook",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"pm-pre-{{$timestamp}}\",\n  \"url\": \"https://example.com/hooks/pre\",\n  \"type\": \"PRE_TRANSACTION\",\n  \"active\": true,\n  \"timeout\": 30,\n  \"retry_count\": 1\n}"
+            },
+            "url": "{{baseUrl}}/hooks"
+          }
+        },
+        {
+          "name": "Create POST hook",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"pm-post-{{$timestamp}}\",\n  \"url\": \"https://example.com/hooks/post\",\n  \"type\": \"POST_TRANSACTION\",\n  \"active\": true,\n  \"timeout\": 30,\n  \"retry_count\": 1\n}"
+            },
+            "url": "{{baseUrl}}/hooks"
+          }
+        },
+        {
+          "name": "List hooks (no type filter)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('array', () => pm.expect(body).to.be.an('array'));",
+                  "const types = body.map(h => h.type);",
+                  "pm.test('includes PRE', () => pm.expect(types).to.include('PRE_TRANSACTION'));",
+                  "pm.test('includes POST', () => pm.expect(types).to.include('POST_TRANSACTION'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/hooks"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Validation errors",
+      "item": [
+        {
+          "name": "Negative amount",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('client error', () => pm.expect(pm.response.code).to.be.at.least(400));",
+                  "pm.test('structured code', () => {",
+                  "  pm.expect(['TXN_VALIDATION_ERROR', 'TXN_INVALID_AMOUNT']).to.include(body.error_detail.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": -10,\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"reference\": \"pm-neg-{{$timestamp}}\",\n  \"description\": \"Negative amount\",\n  \"source\": \"@FundingPool\",\n  \"destination\": \"{{balanceId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/transactions"
+          }
+        },
+        {
+          "name": "Source equals destination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('client error', () => pm.expect(pm.response.code).to.be.at.least(400));",
+                  "pm.test('error_detail.code', () => pm.expect(body.error_detail.code).to.be.a('string').and.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 10,\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"reference\": \"pm-same-{{$timestamp}}\",\n  \"description\": \"Same source dest\",\n  \"source\": \"{{balanceId}}\",\n  \"destination\": \"{{balanceId}}\",\n  \"allow_overdraft\": true\n}"
+            },
+            "url": "{{baseUrl}}/transactions"
+          }
+        }
+      ]
+    }
+  ]
+}

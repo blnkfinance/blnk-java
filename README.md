@@ -18,14 +18,14 @@ Available on [Maven Central](https://central.sonatype.com/artifact/com.blnkfinan
 <dependency>
   <groupId>com.blnkfinance</groupId>
   <artifactId>blnk-java</artifactId>
-  <version>1.3.0</version>
+  <version>1.4.0</version>
 </dependency>
 ```
 
 Gradle:
 
 ```kotlin
-implementation("com.blnkfinance:blnk-java:1.3.0")
+implementation("com.blnkfinance:blnk-java:1.4.0")
 ```
 
 The only runtime dependency is Jackson Databind; HTTP uses the JDK's built-in
@@ -86,6 +86,39 @@ ApiResponse<JsonNode> deposit = blnk.transactions().create(
         .allowOverdraft(true));
 ```
 
+Preview a post without writing it (Core 0.15.3+):
+
+```java
+import com.blnkfinance.blnk.types.DryRunTransactionResponse;
+
+ApiResponse<JsonNode> preview = blnk.transactions().create(
+    CreateTransactions.create()
+        .amount(120)
+        .precision(100)
+        .currency("USD")
+        .reference("ref_preview_001")
+        .source("@WorldUSD")
+        .destination(balance.data().get("balance_id").asText())
+        .dryRun(true));
+
+DryRunTransactionResponse dryRun = DryRunTransactionResponse.fromJson(preview.data());
+if (Boolean.TRUE.equals(dryRun.wouldApply())) {
+    System.out.println("would apply: " + dryRun.status());
+} else {
+    System.out.println("rejected: " + dryRun.rejection().code());
+}
+```
+
+Create an internal General Ledger balance:
+
+```java
+blnk.ledgerBalances().create(
+    CreateLedgerBalance.create()
+        .ledgerId("general_ledger_id")
+        .currency("USD")
+        .indicator("@Revenue"));
+```
+
 ## Authentication
 
 Pass your Blnk secret key as the first argument to `Blnk.init`. When set, every request
@@ -137,9 +170,13 @@ are programmer errors: constructing a client without a `baseUrl`
 ## Tests
 
 ```sh
-mvn test                 # 489 tests: 444 offline unit tests, 45 live-gated
+mvn test                 # offline unit tests (live suites skip unless BLNK_E2E=1)
 BLNK_E2E=1 mvn test      # also runs integration + e2e against http://localhost:5001
 ```
+
+A Postman collection for the Core 0.15.3 flows is in
+`postman/blnk-java-core-0.15.3.postman_collection.json`. Import it, set
+`baseUrl` and `apiKey`, then run the collection.
 
 Unit tests inject a mock transport and run fully offline. The live suites need a running
 Blnk Core (`docker compose up` in the [blnk](https://github.com/blnkfinance/blnk) repo).

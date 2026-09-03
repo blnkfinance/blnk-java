@@ -150,6 +150,40 @@ class LedgerBalanceValidatorsTest {
     }
 
     @Test
+    @DisplayName("accepts indicator on general_ledger_id")
+    void acceptsIndicatorOnGeneralLedgerId() {
+      Map<String, Object> data = new LinkedHashMap<>();
+      data.put("ledger_id", "general_ledger_id");
+      data.put("currency", "USD");
+      data.put("indicator", "@Revenue");
+      assertNull(LedgerBalanceValidators.validateCreateLedgerBalance(data));
+    }
+
+    @Test
+    @DisplayName("rejects indicator with whitespace")
+    void rejectsIndicatorWithWhitespace() {
+      Map<String, Object> data = new LinkedHashMap<>();
+      data.put("ledger_id", "general_ledger_id");
+      data.put("currency", "USD");
+      data.put("indicator", "@Rev enue");
+      assertEquals(
+          "indicator must start with @ and contain no whitespace",
+          LedgerBalanceValidators.validateCreateLedgerBalance(data));
+    }
+
+    @Test
+    @DisplayName("rejects indicator on a customer ledger")
+    void rejectsIndicatorOnACustomerLedger() {
+      Map<String, Object> data = new LinkedHashMap<>();
+      data.put("ledger_id", "ldg_123");
+      data.put("currency", "USD");
+      data.put("indicator", "@Revenue");
+      assertEquals(
+          "indicator is only valid when ledger_id is general_ledger_id",
+          LedgerBalanceValidators.validateCreateLedgerBalance(data));
+    }
+
+    @Test
     @DisplayName("rejects invalid allocation_strategy")
     void rejectsInvalidAllocationStrategy() {
       Map<String, Object> data = new LinkedHashMap<>();

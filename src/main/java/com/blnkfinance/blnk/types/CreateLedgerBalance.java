@@ -38,6 +38,16 @@ public final class CreateLedgerBalance {
     return this;
   }
 
+  /**
+   * Internal-balance indicator (for example {@code @Revenue}). Only valid when
+   * {@code ledger_id} is {@code general_ledger_id}; must start with {@code @}
+   * and contain no whitespace.
+   */
+  public CreateLedgerBalance indicator(String indicator) {
+    fields.put("indicator", indicator);
+    return this;
+  }
+
   /** Optional boolean flag; typed {@code Object} so non-boolean input reaches the validator. */
   public CreateLedgerBalance trackFundLineage(Object trackFundLineage) {
     fields.put("track_fund_lineage", trackFundLineage);

@@ -128,6 +128,22 @@ public final class CreateTransactions {
     return this;
   }
 
+  /**
+   * Preview the post without writing a transaction, queue entry, webhook, hook,
+   * or {@code @} balance. The {@code reference} is not consumed. Takes
+   * precedence over {@code skip_queue}.
+   */
+  public CreateTransactions dryRun(boolean dryRun) {
+    fields.put("dry_run", dryRun);
+    return this;
+  }
+
+  /** Untyped overload: accepts any value, letting non-boolean input reach the validator. */
+  public CreateTransactions dryRun(Object dryRun) {
+    fields.put("dry_run", dryRun);
+    return this;
+  }
+
   public CreateTransactions atomic(boolean atomic) {
     fields.put("atomic", atomic);
     return this;

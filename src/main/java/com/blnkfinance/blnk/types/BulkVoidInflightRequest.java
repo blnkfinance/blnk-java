@@ -35,6 +35,18 @@ public final class BulkVoidInflightRequest {
     return this;
   }
 
+  /** Preview the bulk void without applying it. */
+  public BulkVoidInflightRequest dryRun(boolean dryRun) {
+    fields.put("dry_run", dryRun);
+    return this;
+  }
+
+  /** Untyped overload: accepts any value, letting non-boolean input reach the validator. */
+  public BulkVoidInflightRequest dryRun(Object dryRun) {
+    fields.put("dry_run", dryRun);
+    return this;
+  }
+
   public BulkVoidInflightRequest transactionIds(List<String> transactionIds) {
     fields.put("transaction_ids", new ArrayList<>(transactionIds));
     return this;
