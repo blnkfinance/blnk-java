@@ -436,6 +436,26 @@ class TransactionValidatorsTest {
     }
 
     @Test
+    @DisplayName("allows dry_run on create payloads")
+    void allowsDryRunOnCreatePayloads() {
+      Map<String, Object> data = scalarBase();
+      data.put("dry_run", true);
+
+      assertNull(TransactionValidators.validateCreateTransactions(data));
+    }
+
+    @Test
+    @DisplayName("rejects invalid dry_run values")
+    void rejectsInvalidDryRunValues() {
+      Map<String, Object> data = scalarBase();
+      data.put("dry_run", "true");
+
+      assertEquals(
+          "dry_run must be a boolean if provided.",
+          TransactionValidators.validateCreateTransactions(data));
+    }
+
+    @Test
     @DisplayName("rejects invalid skip_queue values")
     void rejectsInvalidSkipQueueValues() {
       Map<String, Object> data = scalarBase();
@@ -814,6 +834,16 @@ class TransactionValidatorsTest {
     }
 
     @Test
+    @DisplayName("allows dry_run on update payloads")
+    void allowsDryRunOnUpdatePayloads() {
+      Map<String, Object> data = new LinkedHashMap<>();
+      data.put("status", "commit");
+      data.put("dry_run", true);
+
+      assertNull(TransactionValidators.validateUpdateTransactions(data));
+    }
+
+    @Test
     @DisplayName("allows skip_queue on update payloads")
     void allowsSkipQueueOnUpdatePayloads() {
       Map<String, Object> data = new LinkedHashMap<>();
@@ -847,6 +877,28 @@ class TransactionValidatorsTest {
       data.put("skip_queue", true);
 
       assertNull(TransactionValidators.validateRefundTransaction(data));
+    }
+
+    @Test
+    @DisplayName("allows dry_run, description, and meta_data on refund payloads")
+    void allowsDryRunDescriptionAndMetaDataOnRefundPayloads() {
+      Map<String, Object> data = new LinkedHashMap<>();
+      data.put("dry_run", true);
+      data.put("description", "Customer refund");
+      data.put("meta_data", Map.of("reason", "duplicate"));
+
+      assertNull(TransactionValidators.validateRefundTransaction(data));
+    }
+
+    @Test
+    @DisplayName("rejects invalid description on refund payloads")
+    void rejectsInvalidDescriptionOnRefundPayloads() {
+      Map<String, Object> data = new LinkedHashMap<>();
+      data.put("description", 12);
+
+      assertEquals(
+          "description must be a valid string if provided",
+          TransactionValidators.validateRefundTransaction(data));
     }
 
     @Test

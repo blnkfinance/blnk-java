@@ -314,6 +314,55 @@ class TransactionsTest {
     }
 
     @Test
+    @DisplayName("create forwards dry_run on request")
+    void createForwardsDryRunOnRequest() {
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      Transactions transactions = newTransactions(capturedRequest);
+
+      CreateTransactions data =
+          CreateTransactions.create()
+              .amount(10000)
+              .currency("USD")
+              .description("Dry-run preview")
+              .precision(100)
+              .reference("dry_run_ref_001")
+              .source("@FundingPool")
+              .destination("bln_recipient")
+              .dryRun(true);
+
+      ApiResponse<JsonNode> transaction = transactions.create(data);
+
+      assertEquals(
+          List.of(new CapturingRequest.Call("transactions", data.toJson(), "POST", null)),
+          capturedRequest.calls);
+      assertEquals(201, transaction.status());
+      assertEquals(true, data.toJson().get("dry_run").booleanValue());
+    }
+
+    @Test
+    @DisplayName("create rejects invalid dry_run")
+    void createRejectsInvalidDryRun() {
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      Transactions transactions = newTransactions(capturedRequest);
+
+      ApiResponse<JsonNode> response =
+          transactions.create(
+              CreateTransactions.create()
+                  .amount(10000)
+                  .currency("USD")
+                  .description("Bad dry-run")
+                  .precision(100)
+                  .reference("dry_run_bad")
+                  .source("@FundingPool")
+                  .destination("bln_recipient")
+                  .dryRun((Object) "true"));
+
+      assertEquals(List.of(), capturedRequest.calls);
+      assertEquals(400, response.status());
+      assertEquals("dry_run must be a boolean if provided.", response.message());
+    }
+
+    @Test
     @DisplayName("It should handle missing required fields")
     void itShouldHandleMissingRequiredFields() {
       CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
@@ -466,6 +515,25 @@ class TransactionsTest {
       assertEquals(
           List.of(
               new CapturingRequest.Call("transactions/inflight/" + id, data.toJson(), "PUT", null)),
+          capturedRequest.calls);
+      assertEquals(200, transaction.status());
+    }
+
+    @Test
+    @DisplayName("updateStatus forwards dry_run on request")
+    void updateStatusForwardsDryRunOnRequest() {
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      Transactions transactions = newTransactions(capturedRequest);
+
+      UpdateTransactionStatus data =
+          UpdateTransactionStatus.create().status("commit").dryRun(true);
+
+      ApiResponse<JsonNode> transaction = transactions.updateStatus(id, data);
+
+      assertEquals(
+          List.of(
+              new CapturingRequest.Call(
+                  "transactions/inflight/" + id, data.toJson(), "PUT", null)),
           capturedRequest.calls);
       assertEquals(200, transaction.status());
     }
@@ -719,6 +787,27 @@ class TransactionsTest {
       Transactions transactions = newTransactions(capturedRequest);
 
       RefundTransactionRequest options = RefundTransactionRequest.create().skipQueue(true);
+      ApiResponse<JsonNode> refundResponse = transactions.refund(id, options);
+
+      assertEquals(
+          List.of(
+              new CapturingRequest.Call(
+                  "refund-transaction/" + id, options.toJson(), "POST", null)),
+          capturedRequest.calls);
+      assertEquals(201, refundResponse.status());
+    }
+
+    @Test
+    @DisplayName("Refund forwards dry_run, description, and meta_data")
+    void refundForwardsDryRunDescriptionAndMetaData() {
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      Transactions transactions = newTransactions(capturedRequest);
+
+      RefundTransactionRequest options =
+          RefundTransactionRequest.create()
+              .dryRun(true)
+              .description("Customer refund")
+              .metaData(Map.of("reason", "duplicate"));
       ApiResponse<JsonNode> refundResponse = transactions.refund(id, options);
 
       assertEquals(
@@ -1092,6 +1181,34 @@ class TransactionsTest {
     }
 
     @Test
+    @DisplayName("createBulk forwards dry_run on bulk request")
+    void createBulkForwardsDryRunOnBulkRequest() {
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      Transactions transactions = newTransactions(capturedRequest);
+
+      BulkTransactions data =
+          BulkTransactions.create()
+              .dryRun(true)
+              .transactions(
+                  List.of(
+                      CreateTransactions.create()
+                          .amount(1000)
+                          .currency("USD")
+                          .description("Bulk dry-run")
+                          .precision(100)
+                          .reference("bulk_dry_run_001")
+                          .source("@source_account_1")
+                          .destination("@destination_account_1")));
+
+      ApiResponse<JsonNode> bulkResponse = transactions.createBulk(data);
+
+      assertEquals(
+          List.of(new CapturingRequest.Call("transactions/bulk", data.toJson(), "POST", null)),
+          capturedRequest.calls);
+      assertEquals(201, bulkResponse.status());
+    }
+
+    @Test
     @DisplayName("createBulk rejects oversized transactions array")
     void createBulkRejectsOversizedTransactionsArray() {
       CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
@@ -1219,6 +1336,29 @@ class TransactionsTest {
     }
 
     @Test
+    @DisplayName("bulkCommitInflight forwards dry_run on request")
+    void bulkCommitInflightForwardsDryRunOnRequest() {
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      Transactions transactions = newTransactions(capturedRequest);
+
+      List<BulkCommitInflightItem> items =
+          List.of(
+              BulkCommitInflightItem.create()
+                  .transactionId("txn_11111111-1111-4111-8111-111111111111"));
+      BulkCommitInflightRequest data =
+          BulkCommitInflightRequest.create().dryRun(true).transactions(items);
+
+      ApiResponse<JsonNode> response = transactions.bulkCommitInflight(data);
+
+      assertEquals(
+          List.of(
+              new CapturingRequest.Call(
+                  "transactions/inflight/bulk/commit", data.toJson(), "POST", null)),
+          capturedRequest.calls);
+      assertEquals(200, response.status());
+    }
+
+    @Test
     @DisplayName("bulkCommitInflight forwards skip_queue on request")
     void bulkCommitInflightForwardsSkipQueueOnRequest() {
       CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
@@ -1325,6 +1465,27 @@ class TransactionsTest {
       assertEquals(List.of(), capturedRequest.calls);
       assertEquals(400, response.status());
       assertEquals("transaction_id is required at index 0.", response.message());
+    }
+
+    @Test
+    @DisplayName("bulkVoidInflight forwards dry_run on request")
+    void bulkVoidInflightForwardsDryRunOnRequest() {
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      Transactions transactions = newTransactions(capturedRequest);
+
+      BulkVoidInflightRequest data =
+          BulkVoidInflightRequest.create()
+              .dryRun(true)
+              .transactionIds(List.of("txn_11111111-1111-4111-8111-111111111111"));
+
+      ApiResponse<JsonNode> response = transactions.bulkVoidInflight(data);
+
+      assertEquals(
+          List.of(
+              new CapturingRequest.Call(
+                  "transactions/inflight/bulk/void", data.toJson(), "POST", null)),
+          capturedRequest.calls);
+      assertEquals(200, response.status());
     }
 
     @Test

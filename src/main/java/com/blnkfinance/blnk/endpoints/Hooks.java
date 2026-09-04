@@ -42,7 +42,10 @@ public class Hooks {
     }
   }
 
-  /** Lists hooks without filters — {@code GET hooks}. */
+  /**
+   * Lists hooks without filters — {@code GET hooks}. Core 0.15.3+ returns
+   * every hook (PRE and POST) when {@code type} is omitted.
+   */
   public ApiResponse<JsonNode> list() {
     return listInternal(null);
   }

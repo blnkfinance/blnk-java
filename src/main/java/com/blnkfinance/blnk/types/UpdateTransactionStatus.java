@@ -59,6 +59,18 @@ public final class UpdateTransactionStatus {
     return this;
   }
 
+  /** Preview the inflight commit or void without applying it. */
+  public UpdateTransactionStatus dryRun(boolean dryRun) {
+    fields.put("dry_run", dryRun);
+    return this;
+  }
+
+  /** Untyped overload: accepts any value, letting non-boolean input reach the validator. */
+  public UpdateTransactionStatus dryRun(Object dryRun) {
+    fields.put("dry_run", dryRun);
+    return this;
+  }
+
   /** Untyped overload: accepts any value, letting non-boolean input reach the validator. */
   public UpdateTransactionStatus skipQueue(Object skipQueue) {
     fields.put("skip_queue", skipQueue);

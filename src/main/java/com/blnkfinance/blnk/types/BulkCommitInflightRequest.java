@@ -35,6 +35,18 @@ public final class BulkCommitInflightRequest {
     return this;
   }
 
+  /** Preview the bulk commit without applying it. */
+  public BulkCommitInflightRequest dryRun(boolean dryRun) {
+    fields.put("dry_run", dryRun);
+    return this;
+  }
+
+  /** Untyped overload: accepts any value, letting non-boolean input reach the validator. */
+  public BulkCommitInflightRequest dryRun(Object dryRun) {
+    fields.put("dry_run", dryRun);
+    return this;
+  }
+
   public BulkCommitInflightRequest transactions(List<BulkCommitInflightItem> transactions) {
     List<Map<String, Object>> items = new ArrayList<>();
     for (BulkCommitInflightItem item : transactions) {

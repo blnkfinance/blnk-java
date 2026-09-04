@@ -173,6 +173,48 @@ class LedgerBalancesTest {
   }
 
   @Test
+  @DisplayName("Create forwards indicator for a General Ledger balance")
+  void createForwardsIndicatorForGeneralLedgerBalance() {
+    BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 201);
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    LedgerBalances ledgerBalance = service(capturedRequest);
+
+    CreateLedgerBalance data =
+        CreateLedgerBalance.create()
+            .ledgerId("general_ledger_id")
+            .currency("USD")
+            .indicator("@Revenue");
+
+    ApiResponse<JsonNode> response = ledgerBalance.create(data);
+
+    assertEquals(
+        List.of(new CapturingRequest.Call("balances", data.toJson(), "POST", null)),
+        capturedRequest.calls);
+    assertEquals(201, response.status());
+    assertEquals("@Revenue", data.toJson().get("indicator").asText());
+  }
+
+  @Test
+  @DisplayName("Create rejects indicator on a non-general ledger")
+  void createRejectsIndicatorOnNonGeneralLedger() {
+    BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true);
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    LedgerBalances ledgerBalance = service(capturedRequest);
+
+    ApiResponse<JsonNode> response =
+        ledgerBalance.create(
+            CreateLedgerBalance.create()
+                .ledgerId(TestMocks.LEDGER_ID)
+                .currency("USD")
+                .indicator("@Revenue"));
+
+    assertEquals(List.of(), capturedRequest.calls);
+    assertEquals(400, response.status());
+    assertEquals(
+        "indicator is only valid when ledger_id is general_ledger_id", response.message());
+  }
+
+  @Test
   @DisplayName("it should handle meta_data if it is not an object")
   void itShouldHandleMetaDataIfItIsNotAnObject() {
     BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true);

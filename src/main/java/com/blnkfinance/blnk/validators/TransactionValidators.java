@@ -459,6 +459,10 @@ public final class TransactionValidators {
       return "skip_queue must be a boolean if provided.";
     }
 
+    if (data.containsKey("dry_run") && !(data.get("dry_run") instanceof Boolean)) {
+      return "dry_run must be a boolean if provided.";
+    }
+
     if (data.containsKey("atomic") && !(data.get("atomic") instanceof Boolean)) {
       // Note: lowercase here, capitalized in the bulk validator — callers
       // depend on the exact text.
@@ -790,8 +794,12 @@ public final class TransactionValidators {
       return "skip_queue must be a boolean if provided.";
     }
 
+    if (data.containsKey("dry_run") && !(data.get("dry_run") instanceof Boolean)) {
+      return "dry_run must be a boolean if provided.";
+    }
+
     List<String> allowedFields =
-        List.of("status", "amount", "precise_amount", "meta_data", "skip_queue");
+        List.of("status", "amount", "precise_amount", "meta_data", "skip_queue", "dry_run");
     for (String key : data.keySet()) { // Insertion order decides which field is reported.
       if (!allowedFields.contains(key)) {
         return "Invalid field: " + key; // No trailing period — callers depend on the text.
@@ -811,7 +819,20 @@ public final class TransactionValidators {
       return "skip_queue must be a boolean if provided.";
     }
 
-    List<String> allowedFields = List.of("skip_queue");
+    if (data.containsKey("dry_run") && !(data.get("dry_run") instanceof Boolean)) {
+      return "dry_run must be a boolean if provided.";
+    }
+
+    if (data.containsKey("description") && !StringUtils.isValidString(data.get("description"))) {
+      return "description must be a valid string if provided";
+    }
+
+    if (data.containsKey("meta_data")
+        && !LedgerBalanceValidators.isValidMetaData(data.get("meta_data"))) {
+      return "meta_data must be a valid object if provided";
+    }
+
+    List<String> allowedFields = List.of("skip_queue", "dry_run", "description", "meta_data");
     for (String key : data.keySet()) {
       if (!allowedFields.contains(key)) {
         return "Invalid field: " + key;
@@ -829,6 +850,10 @@ public final class TransactionValidators {
   public static String validateBulkVoidInflight(Map<String, Object> data) {
     if (data.containsKey("skip_queue") && !(data.get("skip_queue") instanceof Boolean)) {
       return "skip_queue must be a boolean if provided.";
+    }
+
+    if (data.containsKey("dry_run") && !(data.get("dry_run") instanceof Boolean)) {
+      return "dry_run must be a boolean if provided.";
     }
 
     if (!StringUtils.isValidArray(data.get("transaction_ids"))) {
@@ -853,7 +878,7 @@ public final class TransactionValidators {
       }
     }
 
-    List<String> allowedFields = List.of("skip_queue", "transaction_ids");
+    List<String> allowedFields = List.of("skip_queue", "dry_run", "transaction_ids");
     for (String key : data.keySet()) {
       if (!allowedFields.contains(key)) {
         return "Invalid field: " + key;
@@ -871,6 +896,10 @@ public final class TransactionValidators {
   public static String validateBulkCommitInflight(Map<String, Object> data) {
     if (data.containsKey("skip_queue") && !(data.get("skip_queue") instanceof Boolean)) {
       return "skip_queue must be a boolean if provided.";
+    }
+
+    if (data.containsKey("dry_run") && !(data.get("dry_run") instanceof Boolean)) {
+      return "dry_run must be a boolean if provided.";
     }
 
     if (!StringUtils.isValidArray(data.get("transactions"))) {
@@ -915,7 +944,7 @@ public final class TransactionValidators {
       }
     }
 
-    List<String> allowedFields = List.of("skip_queue", "transactions");
+    List<String> allowedFields = List.of("skip_queue", "dry_run", "transactions");
     for (String key : data.keySet()) {
       if (!allowedFields.contains(key)) {
         return "Invalid field: " + key;
@@ -951,6 +980,10 @@ public final class TransactionValidators {
 
     if (data.containsKey("skip_queue") && !(data.get("skip_queue") instanceof Boolean)) {
       return "skip_queue must be a boolean if provided.";
+    }
+
+    if (data.containsKey("dry_run") && !(data.get("dry_run") instanceof Boolean)) {
+      return "dry_run must be a boolean if provided.";
     }
 
     if (!StringUtils.isValidArray(data.get("transactions"))) {

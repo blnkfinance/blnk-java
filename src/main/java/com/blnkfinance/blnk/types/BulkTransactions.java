@@ -9,8 +9,8 @@ import java.util.Map;
 
 /**
  * Request body for {@code POST transactions/bulk}: optional {@code atomic},
- * {@code inflight}, {@code run_async} and {@code skip_queue} flags plus the
- * list of {@code transactions}.
+ * {@code inflight}, {@code run_async}, {@code skip_queue}, and {@code dry_run}
+ * flags plus the list of {@code transactions}.
  *
  * <p>{@code transactions} items keep their raw date inputs; each item is run
  * through {@code TransactionSerialization.serializeCreateTransaction} by
@@ -49,6 +49,21 @@ public final class BulkTransactions {
 
   public BulkTransactions skipQueue(boolean skipQueue) {
     fields.put("skip_queue", skipQueue);
+    return this;
+  }
+
+  /**
+   * Preview the batch without writing anything. {@code run_async} is ignored;
+   * {@code skip_queue} still selects cumulative vs independent projection.
+   */
+  public BulkTransactions dryRun(boolean dryRun) {
+    fields.put("dry_run", dryRun);
+    return this;
+  }
+
+  /** Untyped overload: accepts any value, letting non-boolean input reach the validator. */
+  public BulkTransactions dryRun(Object dryRun) {
+    fields.put("dry_run", dryRun);
     return this;
   }
 
