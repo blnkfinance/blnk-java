@@ -43,7 +43,7 @@
     <jackson.version>2.17.2</jackson.version>
     <junit.version>5.10.3</junit.version>
     <!-- Default GPG key id for Blnk Finance Maven signing; override with -Dgpg.keyname=... -->
-    <gpg.keyname>2DEE5B3513DF2BF0</gpg.keyname>
+    <gpg.keyname>3014B29B416FD93D</gpg.keyname>
   </properties>
 
   <dependencies>
@@ -139,11 +139,7 @@
             </executions>
             <configuration>
               <keyname>${gpg.keyname}</keyname>
-              <!-- Prefer pinentry loopback when prompted non-interactively -->
-              <gpgArguments>
-                <arg>--pinentry-mode</arg>
-                <arg>loopback</arg>
-              </gpgArguments>
+              <!-- pinentry-mac shows a GUI prompt; loopback has no TTY in this environment -->
             </configuration>
           </plugin>
 
