@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `search().multiSearch(MultiSearchParams)`, wrapping `POST /multi-search`. Runs
+  several single-collection searches in one round trip; each entry is a
+  `SearchParams` tagged with its collection, and results return in the same
+  order. Core forwards the body straight to Typesense's multi-search, so the
+  wire shape is `{"searches": [{"collection": ..., "q": ..., ...}]}`. Every
+  entry is validated client-side with the same rules as `search()`, and
+  failures name the entry (`searches[1].collection ...`).
+
 ## 1.4.0 — Core 0.15.3
 
 Aligns the Java SDK with [Blnk Core 0.15.3](https://docs.blnkfinance.com/changelog/blnk-core).
