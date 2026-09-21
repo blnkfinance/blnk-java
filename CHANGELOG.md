@@ -10,6 +10,10 @@
   back to Core's defaults of `10` and `0`. Invalid pagination is rejected
   client-side with a `400` before any request is made, matching Core's own
   `GEN_VALIDATION_ERROR` rules.
+- `transactions().list()`, wrapping `GET /transactions`, with the same optional
+  `ListOptions`. Core's default page here is `20`. Core silently falls back to
+  its defaults on invalid pagination for this route; the SDK rejects it with a
+  `400` instead so mistakes are visible.
 
 ## 1.4.0 — Core 0.15.3
 

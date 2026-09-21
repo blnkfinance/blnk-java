@@ -13,6 +13,7 @@ import com.blnkfinance.blnk.types.BulkTransactions;
 import com.blnkfinance.blnk.types.BulkVoidInflightRequest;
 import com.blnkfinance.blnk.types.CreateTransactionResponse;
 import com.blnkfinance.blnk.types.CreateTransactions;
+import com.blnkfinance.blnk.types.ListOptions;
 import com.blnkfinance.blnk.types.MultipleSourcesT;
 import com.blnkfinance.blnk.types.RecoverQueueRequest;
 import com.blnkfinance.blnk.types.RefundTransactionRequest;
@@ -690,6 +691,72 @@ class TransactionsTest {
       assertEquals(List.of(), capturedRequest.calls);
       assertEquals(400, response.status());
       assertEquals("threshold must be a valid duration string (e.g. 5m, 1h).", response.message());
+    }
+  }
+
+  @Nested
+  @DisplayName("GET all transactions")
+  class GetAllTransactions {
+
+    private BlnkRequest thirdPartyRequest;
+
+    @BeforeEach
+    void beforeEach() {
+      thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
+    }
+
+    @Test
+    @DisplayName("list calls GET /transactions with no query when no options are given")
+    void listCallsGetTransactions() {
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      Transactions transactions = newTransactions(capturedRequest);
+
+      ApiResponse<JsonNode> response = transactions.list();
+
+      assertEquals(
+          List.of(new CapturingRequest.Call("transactions", null, "GET", null)),
+          capturedRequest.calls);
+      assertEquals(200, response.status());
+    }
+
+    @Test
+    @DisplayName("list forwards limit and offset as query parameters")
+    void listForwardsLimitAndOffset() {
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      Transactions transactions = newTransactions(capturedRequest);
+
+      transactions.list(ListOptions.create().limit(100).offset(200));
+
+      assertEquals(
+          List.of(
+              new CapturingRequest.Call("transactions?limit=100&offset=200", null, "GET", null)),
+          capturedRequest.calls);
+    }
+
+    @Test
+    @DisplayName("list rejects a limit below 1 without calling the API")
+    void listRejectsLimitBelowOne() {
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      Transactions transactions = newTransactions(capturedRequest);
+
+      ApiResponse<JsonNode> response = transactions.list(ListOptions.create().limit(0));
+
+      assertEquals(List.of(), capturedRequest.calls);
+      assertEquals(400, response.status());
+      assertEquals("limit must be at least 1", response.message());
+    }
+
+    @Test
+    @DisplayName("list handles thrown errors gracefully")
+    void listHandlesThrownErrorsGracefully() {
+      CapturingRequest capturedRequest =
+          CapturingRequest.of(TestMocks.createMockBlnkRequest(true, "Network Error"));
+      Transactions transactions = newTransactions(capturedRequest);
+
+      ApiResponse<JsonNode> response = transactions.list();
+
+      assertEquals(500, response.status());
+      assertEquals("Network Error", response.message());
     }
   }
 
