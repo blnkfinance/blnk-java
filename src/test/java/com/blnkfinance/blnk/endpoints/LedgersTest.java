@@ -6,6 +6,7 @@ import com.blnkfinance.blnk.testsupport.CapturingRequest;
 import com.blnkfinance.blnk.testsupport.TestMocks;
 import com.blnkfinance.blnk.types.ApiResponse;
 import com.blnkfinance.blnk.types.CreateLedger;
+import com.blnkfinance.blnk.types.ListOptions;
 import com.blnkfinance.blnk.types.UpdateLedger;
 import com.blnkfinance.blnk.util.HttpClientUtils;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -158,6 +159,63 @@ class LedgersTest {
     assertEquals(
         List.of(new CapturingRequest.Call("ledgers/ldg_123", data.toJson(), "PUT", null)),
         capturedRequest.calls);
+    assertEquals(500, response.status());
+    assertEquals("Network Error", response.message());
+  }
+
+  @Test
+  @DisplayName("list calls GET /ledgers with no query when no options are given")
+  void listCallsGetLedgers() {
+    BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    Ledgers ledgers = new Ledgers(capturedRequest, mockLogger, HttpClientUtils.FORMAT_RESPONSE);
+
+    ApiResponse<JsonNode> response = ledgers.list();
+
+    assertEquals(
+        List.of(new CapturingRequest.Call("ledgers", null, "GET", null)), capturedRequest.calls);
+    assertEquals(200, response.status());
+  }
+
+  @Test
+  @DisplayName("list forwards limit and offset as query parameters")
+  void listForwardsLimitAndOffset() {
+    BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    Ledgers ledgers = new Ledgers(capturedRequest, mockLogger, HttpClientUtils.FORMAT_RESPONSE);
+
+    ApiResponse<JsonNode> response =
+        ledgers.list(ListOptions.create().limit(25).offset(50));
+
+    assertEquals(
+        List.of(new CapturingRequest.Call("ledgers?limit=25&offset=50", null, "GET", null)),
+        capturedRequest.calls);
+    assertEquals(200, response.status());
+  }
+
+  @Test
+  @DisplayName("list rejects a limit below 1 without calling the API")
+  void listRejectsLimitBelowOne() {
+    BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    Ledgers ledgers = new Ledgers(capturedRequest, mockLogger, HttpClientUtils.FORMAT_RESPONSE);
+
+    ApiResponse<JsonNode> response = ledgers.list(ListOptions.create().limit(0));
+
+    assertEquals(List.of(), capturedRequest.calls);
+    assertEquals(400, response.status());
+    assertEquals("limit must be at least 1", response.message());
+  }
+
+  @Test
+  @DisplayName("list handles thrown errors gracefully")
+  void listHandlesThrownErrorsGracefully() {
+    BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, "Network Error");
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    Ledgers ledgers = new Ledgers(capturedRequest, mockLogger, HttpClientUtils.FORMAT_RESPONSE);
+
+    ApiResponse<JsonNode> response = ledgers.list();
+
     assertEquals(500, response.status());
     assertEquals("Network Error", response.message());
   }

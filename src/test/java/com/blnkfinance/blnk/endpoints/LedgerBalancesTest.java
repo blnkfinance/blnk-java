@@ -9,6 +9,7 @@ import com.blnkfinance.blnk.types.CreateBalanceSnapshotRequest;
 import com.blnkfinance.blnk.types.CreateLedgerBalance;
 import com.blnkfinance.blnk.types.GetBalanceAtRequest;
 import com.blnkfinance.blnk.types.GetBalanceRequest;
+import com.blnkfinance.blnk.types.ListOptions;
 import com.blnkfinance.blnk.types.UpdateBalanceIdentity;
 import com.blnkfinance.blnk.util.HttpClientUtils;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -606,5 +607,58 @@ class LedgerBalancesTest {
     assertEquals(List.of(), capturedRequest.calls);
     assertEquals(400, response.status());
     assertEquals("timestamp is required", response.message());
+  }
+
+  @Test
+  @DisplayName("list calls GET /balances with no query when no options are given")
+  void listCallsGetBalances() {
+    CapturingRequest capturedRequest =
+        CapturingRequest.of(TestMocks.createMockBlnkRequest(true, null, 200));
+
+    ApiResponse<JsonNode> response = service(capturedRequest).list();
+
+    assertEquals(
+        List.of(new CapturingRequest.Call("balances", null, "GET", null)), capturedRequest.calls);
+    assertEquals(200, response.status());
+  }
+
+  @Test
+  @DisplayName("list forwards only the pagination fields that were set")
+  void listForwardsOnlySetPaginationFields() {
+    CapturingRequest capturedRequest =
+        CapturingRequest.of(TestMocks.createMockBlnkRequest(true, null, 200));
+
+    service(capturedRequest).list(ListOptions.create().offset(20));
+
+    assertEquals(
+        List.of(new CapturingRequest.Call("balances?offset=20", null, "GET", null)),
+        capturedRequest.calls);
+  }
+
+  @Test
+  @DisplayName("list rejects a negative offset without calling the API")
+  void listRejectsNegativeOffset() {
+    CapturingRequest capturedRequest =
+        CapturingRequest.of(TestMocks.createMockBlnkRequest(true, null, 200));
+
+    ApiResponse<JsonNode> response = service(capturedRequest).list(ListOptions.create().offset(-1));
+
+    assertEquals(List.of(), capturedRequest.calls);
+    assertEquals(400, response.status());
+    assertEquals("offset must be at least 0", response.message());
+  }
+
+  @Test
+  @DisplayName("list rejects a non-integer limit without calling the API")
+  void listRejectsNonIntegerLimit() {
+    CapturingRequest capturedRequest =
+        CapturingRequest.of(TestMocks.createMockBlnkRequest(true, null, 200));
+
+    ApiResponse<JsonNode> response =
+        service(capturedRequest).list(ListOptions.create().limit((Object) "10"));
+
+    assertEquals(List.of(), capturedRequest.calls);
+    assertEquals(400, response.status());
+    assertEquals("limit must be an integer if provided", response.message());
   }
 }

@@ -122,6 +122,19 @@ blnk.ledgerBalances().create(
         .indicator("@Revenue"));
 ```
 
+Page through ledgers or balances (Core defaults to `limit=10`, `offset=0`):
+
+```java
+import com.blnkfinance.blnk.types.ListOptions;
+
+ApiResponse<JsonNode> firstPage = blnk.ledgers().list();
+ApiResponse<JsonNode> nextPage = blnk.ledgers().list(
+    ListOptions.create().limit(10).offset(10));
+
+ApiResponse<JsonNode> usdBalances = blnk.ledgerBalances().list(
+    ListOptions.create().limit(50));
+```
+
 ## Authentication
 
 Pass your Blnk secret key as the first argument to `Blnk.init`. When set, every request
