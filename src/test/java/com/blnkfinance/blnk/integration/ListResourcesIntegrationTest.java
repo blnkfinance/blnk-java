@@ -18,6 +18,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -92,6 +93,64 @@ class ListResourcesIntegrationTest {
         client.transactions()::list,
         row -> txnId.equals(row.path("transaction_id").asText()),
         "created transaction " + txnId + " missing from list");
+  }
+
+  @Test
+  @DisplayName("transaction list offset=1 is a different row than offset=0")
+  void transactionListOffsetChangesPage() {
+    String ledgerId =
+        client
+            .ledgers()
+            .create(CreateLedger.create().name("Java List Txn Page " + UUID.randomUUID()))
+            .data()
+            .get("ledger_id")
+            .asText();
+    String balanceId =
+        client
+            .ledgerBalances()
+            .create(CreateLedgerBalance.create().ledgerId(ledgerId).currency("USD"))
+            .data()
+            .get("balance_id")
+            .asText();
+    createTransaction(balanceId);
+    createTransaction(balanceId);
+
+    JsonNode first = listPage(0);
+    JsonNode second = listPage(1);
+    assertEquals(1, first.size(), "transactions page 0 should have one row: " + first);
+    assertEquals(1, second.size(), "transactions page 1 should have one row: " + second);
+    String firstId = first.get(0).path("transaction_id").asText();
+    String secondId = second.get(0).path("transaction_id").asText();
+    assertTrue(!firstId.isEmpty(), "transactions page 0 missing transaction_id");
+    assertTrue(!secondId.isEmpty(), "transactions page 1 missing transaction_id");
+    assertNotEquals(
+        firstId, secondId, "transactions offset did not change the page; both returned " + firstId);
+  }
+
+  private static void createTransaction(String balanceId) {
+    ApiResponse<JsonNode> txn =
+        client
+            .transactions()
+            .create(
+                CreateTransactions.create()
+                    .amount(100)
+                    .precision(100)
+                    .currency("USD")
+                    .reference(TestUtils.generateRandomNumbersWithPrefix("list", 8))
+                    .description("list offset coverage")
+                    .source("@WorldUSD")
+                    .destination(balanceId)
+                    .allowOverdraft(true));
+    assertTrue(txn.status() == 200 || txn.status() == 201, txn.message());
+  }
+
+  private static JsonNode listPage(int offset) {
+    ApiResponse<JsonNode> response =
+        client.transactions().list(ListOptions.create().limit(1).offset(offset));
+    assertEquals(200, response.status(), response.message());
+    assertNotNull(response.data());
+    assertTrue(response.data().isArray(), response.data().toString());
+    return response.data();
   }
 
   private static JsonNode pageUntil(
