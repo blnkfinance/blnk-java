@@ -122,6 +122,22 @@ blnk.ledgerBalances().create(
         .indicator("@Revenue"));
 ```
 
+Search several collections in one request (`POST /multi-search`; results come back
+in the same order as the searches):
+
+```java
+import com.blnkfinance.blnk.types.MultiSearchParams;
+import com.blnkfinance.blnk.types.SearchParams;
+
+ApiResponse<JsonNode> results = blnk.search().multiSearch(
+    MultiSearchParams.create()
+        .add("transactions", SearchParams.create().q("ref_001").queryBy("reference"))
+        .add("balances", SearchParams.create().q("*").filterBy("currency:USD"))
+        .add("ledgers", SearchParams.create().q("savings").queryBy("name")));
+
+JsonNode transactionHits = results.data().get("results").get(0).get("hits");
+```
+
 ## Authentication
 
 Pass your Blnk secret key as the first argument to `Blnk.init`. When set, every request
