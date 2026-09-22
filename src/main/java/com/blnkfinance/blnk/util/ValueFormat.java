@@ -24,7 +24,7 @@ public final class ValueFormat {
    * Formats a number for message interpolation: integral finite doubles print
    * without a decimal point ({@code "100"} not {@code "100.0"}); NaN and
    * infinities print as {@code NaN}/{@code Infinity}/{@code -Infinity}; very
-   * large (≥1e21) or very small (<1e-6) magnitudes use exponent notation
+   * large (≥1e21) or very small (&lt;1e-6) magnitudes use exponent notation
    * ({@code 1e+21}).
    */
   public static String formatNumber(double value) {
