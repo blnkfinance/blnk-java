@@ -4,10 +4,12 @@ import com.blnkfinance.blnk.BlnkLogger;
 import com.blnkfinance.blnk.BlnkRequest;
 import com.blnkfinance.blnk.FormatResponseFn;
 import com.blnkfinance.blnk.types.ApiResponse;
+import com.blnkfinance.blnk.types.ListOptions;
 import com.blnkfinance.blnk.types.CreateLedger;
 import com.blnkfinance.blnk.types.UpdateLedger;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.validators.LedgerValidators;
+import com.blnkfinance.blnk.validators.ListValidators;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /** Endpoint service for ledgers: create, retrieve, and update. */
@@ -49,6 +51,31 @@ public class Ledgers {
   public ApiResponse<JsonNode> get(String id) {
     return request.call("ledgers/" + id, null, "GET", null);
   }
+
+  /** Lists ledgers — {@code GET ledgers}, Core default page. */
+  public ApiResponse<JsonNode> list() {
+    return list(null);
+  }
+
+  /**
+   * Lists ledgers — {@code GET ledgers} with {@code limit}/{@code offset} as query
+   * parameters. Options are validated only when non-null. Never throws.
+   */
+  public ApiResponse<JsonNode> list(ListOptions options) {
+    try {
+      String endpoint = "ledgers";
+      if (options != null) {
+        String error = ListValidators.validateListOptions(options.toMap());
+        if (error != null) {
+          return formatResponse.format(400, error, null, null);
+        }
+        endpoint += options.toQueryString();
+      }
+      return request.call(endpoint, null, "GET", null);
+    } catch (RuntimeException error) {
+      return Loggers.handleError(error, logger, formatResponse, "list");
+    }
+  } 
 
   /**
    * Updates a ledger — {@code PUT ledgers/{id}}. A null or empty id is
