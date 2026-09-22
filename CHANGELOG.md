@@ -32,10 +32,12 @@ Aligns the Java SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfin
   Core 0.15.4). Both take an optional `ListOptions` with `limit` (at least `1`)
   and `offset` (at least `0`), sent as query parameters; unset fields fall back
   to Core's defaults of `10` and `0`. Invalid pagination is rejected client-side
-  with a `400` before any request is made, matching Core's own
-  `GEN_VALIDATION_ERROR` rules. `ListOptions` only has `limit`/`offset` setters
-  (unknown builder keys are N/A); map-shaped payloads still reject extra query
-  keys rather than dropping them.
+  with a `400` before any request is made (`limit` at least `1`, `offset` at
+  least `0`, integers only). Those bounds match behaviour observed against Core
+  0.15.4; the published OpenAPI spec does not currently declare these query
+  parameters. `ListOptions` only has `int` `limit`/`offset` setters (unknown
+  builder keys are N/A); map-shaped payloads still reject extra query keys
+  rather than dropping them.
 
 ### Unchanged
 

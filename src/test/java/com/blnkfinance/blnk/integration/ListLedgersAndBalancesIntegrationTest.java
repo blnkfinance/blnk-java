@@ -18,6 +18,7 @@ import java.util.function.Predicate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Live coverage of {@code ledgers().list} and {@code ledgerBalances().list}
@@ -71,28 +72,36 @@ class ListLedgersAndBalancesIntegrationTest {
         "created balance " + balanceId + " missing from list");
   }
 
+  private static final int PAGE_SIZE = 50;
+  private static final int MAX_PAGES = 100;
+
   private static JsonNode pageUntil(
       java.util.function.Function<ListOptions, ApiResponse<JsonNode>> listFn,
       Predicate<JsonNode> predicate,
       String missing) {
     JsonNode found = null;
     int offset = 0;
-    int limit = 50;
+    int pages = 0;
     while (true) {
-      ApiResponse<JsonNode> listed = listFn.apply(ListOptions.create().limit(limit).offset(offset));
+      ApiResponse<JsonNode> listed =
+          listFn.apply(ListOptions.create().limit(PAGE_SIZE).offset(offset));
       assertEquals(200, listed.status(), listed.message());
       assertNotNull(listed.data());
       assertTrue(listed.data().isArray(), listed.data().toString());
+      pages++;
       for (JsonNode row : listed.data()) {
         if (predicate.test(row)) {
           found = row;
           break;
         }
       }
-      if (found != null || listed.data().size() < limit) {
+      if (found != null || listed.data().size() < PAGE_SIZE) {
         break;
       }
-      offset += limit;
+      if (pages >= MAX_PAGES) {
+        fail(missing + "; last offset=" + offset);
+      }
+      offset += PAGE_SIZE;
     }
     assertNotNull(found, missing);
     return found;

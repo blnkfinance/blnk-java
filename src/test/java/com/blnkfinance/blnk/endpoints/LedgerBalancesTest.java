@@ -648,17 +648,4 @@ class LedgerBalancesTest {
     assertEquals("offset must be at least 0", response.message());
   }
 
-  @Test
-  @DisplayName("list rejects a non-integer limit without calling the API")
-  void listRejectsNonIntegerLimit() {
-    CapturingRequest capturedRequest =
-        CapturingRequest.of(TestMocks.createMockBlnkRequest(true, null, 200));
-
-    ApiResponse<JsonNode> response =
-        service(capturedRequest).list(ListOptions.create().limit((Object) "10"));
-
-    assertEquals(List.of(), capturedRequest.calls);
-    assertEquals(400, response.status());
-    assertEquals("limit must be an integer if provided", response.message());
-  }
 }
