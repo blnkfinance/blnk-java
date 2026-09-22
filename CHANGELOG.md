@@ -35,9 +35,11 @@ Aligns the Java SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfin
   with a `400` before any request is made (`limit` at least `1`, `offset` at
   least `0`, integers only). Those bounds match behaviour observed against Core
   0.15.4; the published OpenAPI spec does not currently declare these query
-  parameters. `ListOptions` only has `int` `limit`/`offset` setters (unknown
-  builder keys are N/A); map-shaped payloads still reject extra query keys
-  rather than dropping them.
+  parameters. Live tests (gated on `BLNK_E2E=1`) create two rows and assert
+  `limit=1&offset=1` returns a different id than `limit=1&offset=0`, so
+  pagination is not a no-op against that Core. `ListOptions` only has `int`
+  `limit`/`offset` setters (unknown builder keys are N/A); map-shaped payloads
+  still reject extra query keys rather than dropping them.
 
 ### Unchanged
 
