@@ -212,6 +212,22 @@ class BalanceMonitorsTest {
     }
 
     @Test
+    @DisplayName("listByBalanceId rejects null id without calling the API")
+    void listByBalanceIdRejectsNullId() {
+      BlnkLogger mockLogger = TestMocks.createMockLogger();
+      BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      BalanceMonitor balanceMonitor =
+          new BalanceMonitor(capturedRequest, mockLogger, HttpClientUtils.FORMAT_RESPONSE);
+
+      ApiResponse<JsonNode> response = balanceMonitor.listByBalanceId(null);
+
+      assertEquals(List.of(), capturedRequest.calls);
+      assertEquals(400, response.status());
+      assertEquals("balance id is required", response.message());
+    }
+
+    @Test
     @DisplayName("listByBalanceId rejects whitespace-only id")
     void listByBalanceIdRejectsWhitespaceId() {
       BlnkLogger mockLogger = TestMocks.createMockLogger();
