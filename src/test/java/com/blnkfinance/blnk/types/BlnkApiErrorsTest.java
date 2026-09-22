@@ -60,6 +60,34 @@ class BlnkApiErrorsTest {
   }
 
   @Test
+  @DisplayName("surfaces TXN_ALREADY_REFUNDED from a Core 0.15.4 duplicate refund")
+  void surfacesTxnAlreadyRefunded() {
+    BlnkApiErrorDetail parsed =
+        BlnkApiErrors.parseBlnkApiErrorBody(
+            BlnkJson.parse(
+                "{\"error\":\"transaction txn_1 has already been refunded\",\"error_detail\":{\"code\":\""
+                    + BlnkErrorCodes.TXN_ALREADY_REFUNDED
+                    + "\",\"message\":\"transaction txn_1 has already been refunded\","
+                    + "\"details\":{\"transaction_id\":\"txn_1\"}}}"));
+
+    assertEquals(BlnkErrorCodes.TXN_ALREADY_REFUNDED, parsed.code());
+    assertEquals(BlnkJson.parse("{\"transaction_id\":\"txn_1\"}"), parsed.details());
+  }
+
+  @Test
+  @DisplayName("surfaces BAL_NOT_FOUND when a transaction names a missing balance")
+  void surfacesBalNotFound() {
+    BlnkApiErrorDetail parsed =
+        BlnkApiErrors.parseBlnkApiErrorBody(
+            BlnkJson.parse(
+                "{\"error\":\"balance bln_missing not found\",\"error_detail\":{\"code\":\""
+                    + BlnkErrorCodes.BAL_NOT_FOUND
+                    + "\",\"message\":\"balance bln_missing not found\"}}"));
+
+    assertEquals(BlnkErrorCodes.BAL_NOT_FOUND, parsed.code());
+  }
+
+  @Test
   @DisplayName("returns null for non-object bodies")
   void returnsNullForNonObjectBodies() {
     assertNull(BlnkApiErrors.parseBlnkApiErrorBody(null));

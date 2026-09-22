@@ -47,6 +47,41 @@ public final class SearchValidators {
   }
 
   /**
+   * Validates a multi-search body: {@code searches} must be a non-empty list, and
+   * each entry needs a valid {@code collection} plus params that pass
+   * {@link #validateSearchParams}. Messages are prefixed {@code searches[i]}.
+   */
+  public static String validateMultiSearchParams(Map<String, Object> data) {
+    if (data == null) {
+      return "Multi-search params must be a valid object";
+    }
+
+    if (!(data.get("searches") instanceof List<?> searches) || searches.isEmpty()) {
+      return "searches must be a non-empty array";
+    }
+
+    for (int i = 0; i < searches.size(); i++) {
+      if (!(searches.get(i) instanceof Map<?, ?> raw)) {
+        return "searches[" + i + "] must be a valid object";
+      }
+      Map<String, Object> entry = new java.util.LinkedHashMap<>();
+      raw.forEach((key, value) -> entry.put(String.valueOf(key), value));
+
+      Object collection = entry.remove("collection");
+      if (!(collection instanceof String name) || validateSearchCollection(name) != null) {
+        return "searches[" + i + "].collection must be ledgers, transactions, balances, or identities";
+      }
+
+      String paramsError = validateSearchParams(entry);
+      if (paramsError != null) {
+        return "searches[" + i + "]: " + paramsError;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Validates search parameters. Checks run in a fixed order — {@code q},
    * {@code page}, {@code per_page}, {@code query_by}, {@code filter_by},
    * {@code sort_by} — so the first failing field's message wins.

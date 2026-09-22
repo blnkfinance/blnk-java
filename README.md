@@ -122,6 +122,22 @@ blnk.ledgerBalances().create(
         .indicator("@Revenue"));
 ```
 
+Search several collections in one request (`POST /multi-search`; results come back
+in the same order as the searches):
+
+```java
+import com.blnkfinance.blnk.types.MultiSearchParams;
+import com.blnkfinance.blnk.types.SearchParams;
+
+ApiResponse<JsonNode> results = blnk.search().multiSearch(
+    MultiSearchParams.create()
+        .add("transactions", SearchParams.create().q("ref_001").queryBy("reference"))
+        .add("balances", SearchParams.create().q("*").filterBy("currency:USD"))
+        .add("ledgers", SearchParams.create().q("savings").queryBy("name")));
+
+JsonNode transactionHits = results.data().get("results").get(0).get("hits");
+```
+
 Page through ledgers or balances (Core defaults to `limit=10`, `offset=0`):
 
 ```java
@@ -176,6 +192,20 @@ SDK methods **never throw** for request or validation failures — they return a
 - `data()` — the parsed JSON body (`null` on failure or empty body).
 - `error()` — a structured `BlnkApiErrorDetail {code, message, details}` when the Core
   returned a JSON error body.
+
+Compare `error().code()` against the constants in `BlnkErrorCodes`, which mirror the
+full Core 0.15.4 catalogue (`TXN_ALREADY_REFUNDED`, `BAL_NOT_FOUND`,
+`TXN_INSUFFICIENT_FUNDS`, `TXN_DUPLICATE_REFERENCE`, `LGR_NOT_FOUND`, and so on):
+
+```java
+import com.blnkfinance.blnk.types.BlnkErrorCodes;
+
+ApiResponse<JsonNode> refund = blnk.transactions().refund(transactionId);
+if (refund.error() != null
+    && BlnkErrorCodes.TXN_ALREADY_REFUNDED.equals(refund.error().code())) {
+    // 409: already refunded, or this id is itself a refund — nothing to do
+}
+```
 
 Client-side validation runs before any request is sent: an invalid payload returns a
 `400` response immediately and the HTTP layer is never invoked. The only throwing paths

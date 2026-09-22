@@ -4,6 +4,7 @@ import com.blnkfinance.blnk.BlnkLogger;
 import com.blnkfinance.blnk.BlnkRequest;
 import com.blnkfinance.blnk.FormatResponseFn;
 import com.blnkfinance.blnk.types.ApiResponse;
+import com.blnkfinance.blnk.types.MultiSearchParams;
 import com.blnkfinance.blnk.types.BlnkJson;
 import com.blnkfinance.blnk.types.FilterParams;
 import com.blnkfinance.blnk.types.SearchParams;
@@ -32,6 +33,23 @@ public class Search {
     this.request = request;
     this.logger = logger;
     this.formatResponse = formatResponse;
+  }
+
+  /**
+   * Runs several searches in one request — {@code POST multi-search}. The body
+   * is validated, then forwarded unmodified. Never throws.
+   */
+  public ApiResponse<JsonNode> multiSearch(MultiSearchParams data) {
+    try {
+      String error =
+          SearchValidators.validateMultiSearchParams(data == null ? null : data.toMap());
+      if (error != null) {
+        return formatResponse.format(400, error, null, null);
+      }
+      return request.call("multi-search", data.toJson(), "POST", null);
+    } catch (RuntimeException error) {
+      return Loggers.handleError(error, logger, formatResponse, "multiSearch");
+    }
   }
 
   /**
