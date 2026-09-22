@@ -27,6 +27,13 @@ Aligns the Java SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfin
   `results` in the same order as `searches`. Each entry is validated client-side
   with the same rules as `search()`, and failures name the entry
   (`searches[1].collection ...`).
+- `balanceMonitor().listByBalanceId(balanceId)`, wrapping Core's
+  `GET /balance-monitors/balances/:balance_id`
+  (`api/api.go`: `router.GET("/balance-monitors/balances/:balance_id",
+  a.GetBalanceMonitorsByBalanceID)`). That route has been in Core since ~0.14.x;
+  this SDK release is aligned with Core 0.15.4. The balance id is
+  percent-encoded. Existing `balanceMonitor().list()` (all monitors) is
+  unchanged. This method takes no query map, so unknown list keys are N/A.
 
 ### Unchanged
 

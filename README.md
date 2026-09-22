@@ -138,6 +138,14 @@ ApiResponse<JsonNode> results = blnk.search().multiSearch(
 JsonNode transactionHits = results.data().get("results").get(0).get("hits");
 ```
 
+List monitors for one balance (`GET /balance-monitors/balances/:balance_id`; Core
+since ~0.14.x). The id is percent-encoded. `list()` still returns every monitor:
+
+```java
+ApiResponse<JsonNode> monitorsForBalance =
+    blnk.balanceMonitor().listByBalanceId(balance.data().get("balance_id").asText());
+```
+
 ## Authentication
 
 Pass your Blnk secret key as the first argument to `Blnk.init`. When set, every request
