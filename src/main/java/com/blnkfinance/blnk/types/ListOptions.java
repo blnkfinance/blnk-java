@@ -4,8 +4,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Pagination for {@code GET ledgers} and {@code GET balances}. Sent as query
- * parameters; Core defaults to {@code limit=10}, {@code offset=0}.
+ * Pagination for Core GET list routes. Sent as query parameters; unset fields
+ * are omitted so Core can apply its per-route defaults ({@code limit=10} for
+ * ledgers and balances, {@code limit=20} for transactions; {@code offset=0}
+ * on both).
+ *
+ * <p>Only {@code limit} and {@code offset} setters exist — unknown query keys
+ * cannot be introduced through this builder. {@link
+ * com.blnkfinance.blnk.validators.ListValidators} still rejects extra keys
+ * when it is given a map.
  */
 public final class ListOptions {
 

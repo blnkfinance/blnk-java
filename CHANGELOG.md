@@ -28,12 +28,14 @@ Aligns the Java SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfin
   with the same rules as `search()`, and failures name the entry
   (`searches[1].collection ...`).
 - `ledgers().list()` and `ledgerBalances().list()`, wrapping Core's `GET /ledgers`
-  and `GET /balances` (in Core since 0.14.x; this SDK release is aligned with
+  and `GET /balances` (in Core since ~0.14.x; this SDK release is aligned with
   Core 0.15.4). Both take an optional `ListOptions` with `limit` (at least `1`)
   and `offset` (at least `0`), sent as query parameters; unset fields fall back
   to Core's defaults of `10` and `0`. Invalid pagination is rejected client-side
   with a `400` before any request is made, matching Core's own
-  `GEN_VALIDATION_ERROR` rules.
+  `GEN_VALIDATION_ERROR` rules. `ListOptions` only has `limit`/`offset` setters
+  (unknown builder keys are N/A); map-shaped payloads still reject extra query
+  keys rather than dropping them.
 
 ### Unchanged
 
