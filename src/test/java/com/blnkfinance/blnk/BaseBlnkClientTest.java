@@ -7,6 +7,7 @@ import com.blnkfinance.blnk.testsupport.StreamTestUtils;
 import com.blnkfinance.blnk.testsupport.TestMocks;
 import com.blnkfinance.blnk.types.ApiResponse;
 import com.blnkfinance.blnk.types.BlnkApiErrorDetail;
+import com.blnkfinance.blnk.types.BlnkErrorCodes;
 import com.blnkfinance.blnk.types.BlnkJson;
 import com.blnkfinance.blnk.util.HttpClientUtils;
 import com.blnkfinance.blnk.util.MultipartBody;
@@ -424,6 +425,28 @@ class BaseBlnkClientTest {
 
     assertEquals(404, result.status());
     assertEquals(new BlnkApiErrorDetail("LGR_NOT_FOUND", "ledger not found"), result.error());
+  }
+
+  @Test
+  @DisplayName("request surfaces Core 0.15.4 TXN_ALREADY_REFUNDED on a duplicate refund")
+  void surfacesAlreadyRefundedConflict() {
+    BlnkTransport errorTransport = (url, request) -> TransportResponse.builder()
+        .ok(false)
+        .status(409)
+        .statusText("Conflict")
+        .json(() -> BlnkJson.parse(
+            "{\"error\":\"transaction already refunded\",\"error_detail\":"
+                + "{\"code\":\"TXN_ALREADY_REFUNDED\",\"message\":\"transaction already refunded\"}}"))
+        .build();
+    Blnk errorBlnk =
+        new Blnk(apiKey, options, mockServices, HttpClientUtils.FORMAT_RESPONSE, errorTransport);
+
+    ApiResponse<JsonNode> result =
+        errorBlnk.request("refund-transaction/txn_1", null, "POST", null);
+
+    assertEquals(409, result.status());
+    assertEquals("transaction already refunded", result.message());
+    assertEquals(BlnkErrorCodes.TXN_ALREADY_REFUNDED, result.error().code());
   }
 
   @Test
