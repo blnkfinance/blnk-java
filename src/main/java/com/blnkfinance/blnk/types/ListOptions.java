@@ -30,20 +30,8 @@ public final class ListOptions {
     return this;
   }
 
-  /** Untyped variant; non-integers are rejected by validation. */
-  public ListOptions limit(Object limit) {
-    fields.put("limit", limit);
-    return this;
-  }
-
   /** Rows to skip, at least 0. */
   public ListOptions offset(int offset) {
-    fields.put("offset", offset);
-    return this;
-  }
-
-  /** Untyped variant; non-integers are rejected by validation. */
-  public ListOptions offset(Object offset) {
     fields.put("offset", offset);
     return this;
   }

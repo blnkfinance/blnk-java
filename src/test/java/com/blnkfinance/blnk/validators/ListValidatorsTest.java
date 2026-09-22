@@ -42,12 +42,13 @@ class ListValidatorsTest {
   @Test
   @DisplayName("rejects non-integer limit")
   void rejectsNonIntegerLimit() {
-    assertEquals(
-        "limit must be an integer if provided",
-        ListValidators.validateListOptions(ListOptions.create().limit((Object) 2.5).toMap()));
-    assertEquals(
-        "limit must be an integer if provided",
-        ListValidators.validateListOptions(ListOptions.create().limit((Object) null).toMap()));
+    Map<String, Object> decimal = new java.util.LinkedHashMap<>();
+    decimal.put("limit", 2.5);
+    assertEquals("limit must be an integer if provided", ListValidators.validateListOptions(decimal));
+
+    Map<String, Object> missing = new java.util.LinkedHashMap<>();
+    missing.put("limit", null);
+    assertEquals("limit must be an integer if provided", ListValidators.validateListOptions(missing));
   }
 
   @Test
@@ -61,9 +62,10 @@ class ListValidatorsTest {
   @Test
   @DisplayName("rejects non-integer offset")
   void rejectsNonIntegerOffset() {
+    Map<String, Object> asString = new java.util.LinkedHashMap<>();
+    asString.put("offset", "0");
     assertEquals(
-        "offset must be an integer if provided",
-        ListValidators.validateListOptions(ListOptions.create().offset((Object) "0").toMap()));
+        "offset must be an integer if provided", ListValidators.validateListOptions(asString));
   }
 
   @Test

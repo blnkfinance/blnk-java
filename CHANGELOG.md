@@ -32,11 +32,16 @@ Aligns the Java SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfin
   Core 0.15.4). Both take an optional `ListOptions` with `limit` (at least `1`)
   and `offset` (at least `0`), sent as query parameters; unset fields fall back
   to Core's defaults of `10` and `0`. Invalid pagination is rejected client-side
-  with a `400` before any request is made, matching Core's own
-  `GEN_VALIDATION_ERROR` rules. `ListOptions` only has `limit`/`offset` setters
-  (unknown builder keys are N/A); map-shaped payloads still reject extra query
-  keys rather than dropping them.
-- `transactions().list()`, wrapping Core's `GET /transactions`, with the same
+  with a `400` before any request is made (`limit` at least `1`, `offset` at
+  least `0`, integers only). Those bounds match behaviour observed against Core
+  0.15.4; the published OpenAPI spec does not currently declare these query
+  parameters. Live tests (gated on `BLNK_E2E=1`) create two rows and assert
+  `limit=1&offset=1` returns a different id than `limit=1&offset=0`, so
+  pagination is not a no-op against that Core. `ListOptions` only has `int`
+  `limit`/`offset` setters (unknown builder keys are N/A); map-shaped payloads
+  still reject extra query keys rather than dropping them.
+- `transactions().list()`, wrapping Core's `GET /transactions` (in Core since
+  ~0.14.x; this SDK release is aligned with Core 0.15.4), with the same
   optional `ListOptions`. Core's default page here is `limit=20`. Core's
   `GetAllTransactions` handler silently falls back to its defaults on invalid
   pagination; the SDK rejects it with a `400` instead so mistakes are visible.
