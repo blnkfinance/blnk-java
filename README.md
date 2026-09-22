@@ -1,5 +1,7 @@
 # Blnk Java SDK
 
+[![CI](https://github.com/blnkfinance/blnk-java/actions/workflows/ci.yml/badge.svg)](https://github.com/blnkfinance/blnk-java/actions/workflows/ci.yml)
+
 Official-style Java client for the [Blnk Finance](https://docs.blnkfinance.com) open-source
 ledger. It covers the full Core API: ledgers, balances, transactions (including bulk,
 inflight, and refunds), identities and tokenization, balance monitors, reconciliation,
@@ -136,6 +138,19 @@ ApiResponse<JsonNode> results = blnk.search().multiSearch(
         .add("ledgers", SearchParams.create().q("savings").queryBy("name")));
 
 JsonNode transactionHits = results.data().get("results").get(0).get("hits");
+```
+
+Page through ledgers or balances (Core defaults to `limit=10`, `offset=0`):
+
+```java
+import com.blnkfinance.blnk.types.ListOptions;
+
+ApiResponse<JsonNode> firstPage = blnk.ledgers().list();
+ApiResponse<JsonNode> nextPage = blnk.ledgers().list(
+    ListOptions.create().limit(10).offset(10));
+
+ApiResponse<JsonNode> usdBalances = blnk.ledgerBalances().list(
+    ListOptions.create().limit(50));
 ```
 
 List monitors for one balance (`GET /balance-monitors/balances/:balance_id`; Core

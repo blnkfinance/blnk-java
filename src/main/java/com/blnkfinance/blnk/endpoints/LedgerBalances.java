@@ -4,6 +4,7 @@ import com.blnkfinance.blnk.BlnkLogger;
 import com.blnkfinance.blnk.BlnkRequest;
 import com.blnkfinance.blnk.FormatResponseFn;
 import com.blnkfinance.blnk.types.ApiResponse;
+import com.blnkfinance.blnk.types.ListOptions;
 import com.blnkfinance.blnk.types.CreateBalanceSnapshotRequest;
 import com.blnkfinance.blnk.types.CreateLedgerBalance;
 import com.blnkfinance.blnk.types.GetBalanceAtRequest;
@@ -13,6 +14,7 @@ import com.blnkfinance.blnk.util.UriEncoding;
 import com.blnkfinance.blnk.util.ValueFormat;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.validators.LedgerBalanceValidators;
+import com.blnkfinance.blnk.validators.ListValidators;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.Map;
@@ -98,6 +100,31 @@ public class LedgerBalances {
       return request.call(endpoint, null, "GET", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "get");
+    }
+  }
+
+  /** Lists balances — {@code GET balances}, Core default page. */
+  public ApiResponse<JsonNode> list() {
+    return list(null);
+  }
+
+  /**
+   * Lists balances — {@code GET balances} with {@code limit}/{@code offset} as query
+   * parameters. Options are validated only when non-null. Never throws.
+   */
+  public ApiResponse<JsonNode> list(ListOptions options) {
+    try {
+      String endpoint = "balances";
+      if (options != null) {
+        String error = ListValidators.validateListOptions(options.toMap());
+        if (error != null) {
+          return formatResponse.format(400, error, null, null);
+        }
+        endpoint += options.toQueryString();
+      }
+      return request.call(endpoint, null, "GET", null);
+    } catch (RuntimeException error) {
+      return Loggers.handleError(error, logger, formatResponse, "list");
     }
   }
 
