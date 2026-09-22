@@ -73,4 +73,17 @@ class ListValidatorsTest {
         "limit must be at least 1",
         ListValidators.validateListOptions(ListOptions.create().limit(0).offset(-1).toMap()));
   }
+
+  @Test
+  @DisplayName("rejects unknown query keys instead of dropping them")
+  void rejectsUnknownQueryKeys() {
+    Map<String, Object> misspelled = new java.util.LinkedHashMap<>();
+    misspelled.put("limt", 50);
+    assertEquals("unsupported list option: limt", ListValidators.validateListOptions(misspelled));
+
+    Map<String, Object> page = new java.util.LinkedHashMap<>();
+    page.put("limit", 10);
+    page.put("page", 2);
+    assertEquals("unsupported list option: page", ListValidators.validateListOptions(page));
+  }
 }
