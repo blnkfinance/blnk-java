@@ -40,6 +40,13 @@ Aligns the Java SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfin
   pagination is not a no-op against that Core. `ListOptions` only has `int`
   `limit`/`offset` setters (unknown builder keys are N/A); map-shaped payloads
   still reject extra query keys rather than dropping them.
+- `balanceMonitor().listByBalanceId(balanceId)`, wrapping Core's
+  `GET /balance-monitors/balances/:balance_id`
+  (`api/api.go`: `router.GET("/balance-monitors/balances/:balance_id",
+  a.GetBalanceMonitorsByBalanceID)`). That route has been in Core since ~0.14.x;
+  this SDK release is aligned with Core 0.15.4. The balance id is
+  percent-encoded. Existing `balanceMonitor().list()` (all monitors) is
+  unchanged. This method takes no query map, so unknown list keys are N/A.
 
 ### Unchanged
 
