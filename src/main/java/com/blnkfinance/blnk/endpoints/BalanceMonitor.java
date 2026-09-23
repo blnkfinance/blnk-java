@@ -14,9 +14,9 @@ import com.fasterxml.jackson.databind.JsonNode;
  * Endpoint service for balance monitors: create, retrieve, list, update, and
  * delete monitors on Blnk Core.
  *
- * <p>Note: {@code delete} validates AND URL-encodes its id, while {@code get}
- * and {@code update} do neither — the id is interpolated into the path as-is,
- * and an empty id is allowed.
+ * <p>Note: {@code get} and {@code update} interpolate the id raw (no
+ * validation, no encoding; an empty id is allowed). {@code delete} and
+ * {@code listByBalanceId} validate and percent-encode their path ids.
  */
 public class BalanceMonitor {
 
@@ -76,6 +76,29 @@ public class BalanceMonitor {
   }
 
   /**
+   * Lists monitors for one balance — {@code GET
+   * balance-monitors/balances/{balance_id}}. Distinct from {@link #list()},
+   * which still returns every monitor. The balance id is percent-encoded so
+   * {@code /}, {@code ?}, and {@code #} cannot alter the path. Empty or
+   * whitespace-only ids return {@code 400} without a request. This method
+   * takes no query options, so unknown list keys are N/A.
+   */
+  public ApiResponse<JsonNode> listByBalanceId(String balanceId) {
+    try {
+      if (balanceId == null || balanceId.isBlank()) {
+        return formatResponse.format(400, "balance id is required", null, null);
+      }
+      return request.call(
+          "balance-monitors/balances/" + UriEncoding.encodePathSegment(balanceId),
+          null,
+          "GET",
+          null);
+    } catch (RuntimeException error) {
+      return Loggers.handleError(error, logger, formatResponse, "listByBalanceId");
+    }
+  }
+
+  /**
    * Updates a balance monitor — {@code PUT balance-monitors/{id}}. Validates
    * the data only (the id is neither validated nor URL-encoded), then forwards
    * {@code data} unmodified. Never throws: runtime errors are converted to an
@@ -96,10 +119,9 @@ public class BalanceMonitor {
 
   /**
    * Deletes a balance monitor — {@code DELETE balance-monitors/{id}} with the
-   * id URL-encoded. The ONLY method in this class that validates its id
-   * ({@code monitor id is required}) and encodes it. No body. Never throws:
-   * runtime errors are converted to an error response, reported under the
-   * name {@code "delete"}.
+   * id URL-encoded. Validates its id ({@code monitor id is required}) and
+   * encodes it. No body. Never throws: runtime errors are converted to an
+   * error response, reported under the name {@code "delete"}.
    */
   public ApiResponse<JsonNode> delete(String id) {
     try {
