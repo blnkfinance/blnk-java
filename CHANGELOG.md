@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — Core 0.15.4
+## 1.5.0 — Core 0.15.4
 
 Aligns the Java SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfinance.com/changelog/blnk-core).
 

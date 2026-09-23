@@ -20,14 +20,14 @@ Available on [Maven Central](https://central.sonatype.com/artifact/com.blnkfinan
 <dependency>
   <groupId>com.blnkfinance</groupId>
   <artifactId>blnk-java</artifactId>
-  <version>1.4.0</version>
+  <version>1.5.0</version>
 </dependency>
 ```
 
 Gradle:
 
 ```kotlin
-implementation("com.blnkfinance:blnk-java:1.4.0")
+implementation("com.blnkfinance:blnk-java:1.5.0")
 ```
 
 The only runtime dependency is Jackson Databind; HTTP uses the JDK's built-in
