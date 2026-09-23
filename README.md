@@ -140,7 +140,8 @@ ApiResponse<JsonNode> results = blnk.search().multiSearch(
 JsonNode transactionHits = results.data().get("results").get(0).get("hits");
 ```
 
-Page through ledgers or balances (Core defaults to `limit=10`, `offset=0`):
+Page through ledgers, balances, or transactions (Core defaults to `offset=0` and a
+`limit` of `10`, or `20` for transactions):
 
 ```java
 import com.blnkfinance.blnk.types.ListOptions;
@@ -151,6 +152,9 @@ ApiResponse<JsonNode> nextPage = blnk.ledgers().list(
 
 ApiResponse<JsonNode> usdBalances = blnk.ledgerBalances().list(
     ListOptions.create().limit(50));
+
+ApiResponse<JsonNode> recentTransactions = blnk.transactions().list(
+    ListOptions.create().limit(100));
 ```
 
 List monitors for one balance (`GET /balance-monitors/balances/:balance_id`; Core

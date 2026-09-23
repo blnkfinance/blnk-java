@@ -40,6 +40,11 @@ Aligns the Java SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfin
   pagination is not a no-op against that Core. `ListOptions` only has `int`
   `limit`/`offset` setters (unknown builder keys are N/A); map-shaped payloads
   still reject extra query keys rather than dropping them.
+- `transactions().list()`, wrapping Core's `GET /transactions` (in Core since
+  ~0.14.x; this SDK release is aligned with Core 0.15.4), with the same
+  optional `ListOptions`. Core's default page here is `limit=20`. Core's
+  `GetAllTransactions` handler silently falls back to its defaults on invalid
+  pagination; the SDK rejects it with a `400` instead so mistakes are visible.
 - `balanceMonitor().listByBalanceId(balanceId)`, wrapping Core's
   `GET /balance-monitors/balances/:balance_id`
   (`api/api.go`: `router.GET("/balance-monitors/balances/:balance_id",

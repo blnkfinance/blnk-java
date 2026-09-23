@@ -8,6 +8,7 @@ import com.blnkfinance.blnk.types.BulkCommitInflightRequest;
 import com.blnkfinance.blnk.types.BulkTransactions;
 import com.blnkfinance.blnk.types.BulkVoidInflightRequest;
 import com.blnkfinance.blnk.types.CreateTransactions;
+import com.blnkfinance.blnk.types.ListOptions;
 import com.blnkfinance.blnk.types.RecoverQueueRequest;
 import com.blnkfinance.blnk.types.RefundTransactionRequest;
 import com.blnkfinance.blnk.types.UpdateTransactionStatus;
@@ -15,6 +16,7 @@ import com.blnkfinance.blnk.util.UriEncoding;
 import com.blnkfinance.blnk.util.ValueFormat;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.util.TransactionSerialization;
+import com.blnkfinance.blnk.validators.ListValidators;
 import com.blnkfinance.blnk.validators.TransactionValidators;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -120,6 +122,33 @@ public class Transactions {
       return request.call("transactions/" + transactionId, null, "GET", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "get");
+    }
+  }
+
+  /** Lists transactions — {@code GET transactions}, Core default page ({@code limit=20}). */
+  public ApiResponse<JsonNode> list() {
+    return list(null);
+  }
+
+  /**
+   * Lists transactions — {@code GET transactions} with {@code limit}/{@code offset}
+   * as query parameters. Options are validated only when non-null; Core itself
+   * would silently fall back to its defaults on bad values, so the SDK rejects
+   * them with a {@code 400} instead. Never throws.
+   */
+  public ApiResponse<JsonNode> list(ListOptions options) {
+    try {
+      String endpoint = "transactions";
+      if (options != null) {
+        String error = ListValidators.validateListOptions(options.toMap());
+        if (error != null) {
+          return formatResponse.format(400, error, null, null);
+        }
+        endpoint += options.toQueryString();
+      }
+      return request.call(endpoint, null, "GET", null);
+    } catch (RuntimeException error) {
+      return Loggers.handleError(error, logger, formatResponse, "list");
     }
   }
 
