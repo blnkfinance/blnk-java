@@ -106,6 +106,99 @@ class BaseBlnkClientTest {
   }
 
   @Test
+  @DisplayName("Omits instance_id when instanceId is not configured")
+  void omitsInstanceIdQueryParam() {
+    CapturingTransport capturedTransport = CapturingTransport.of(TransportMocks.successTransport());
+    Blnk authedBlnk =
+        new Blnk(apiKey, options, mockServices, HttpClientUtils.FORMAT_RESPONSE, capturedTransport);
+
+    authedBlnk.request("health", obj(), "GET", null);
+
+    assertEquals("http://mock-api.com/health", capturedTransport.calls.get(0).url());
+  }
+
+  @Test
+  @DisplayName("Appends instance_id query param for Cloud proxy requests")
+  void appendsInstanceIdQueryParam() {
+    CapturingTransport capturedTransport = CapturingTransport.of(TransportMocks.successTransport());
+    BlnkClientOptions proxyOptions =
+        BlnkClientOptions.builder()
+            .baseUrl("https://api.cloud.blnkfinance.com/proxy")
+            .instanceId("instance_073f7ffe-9dfd-42ce-aa50-d1dca1788adc")
+            .timeout(5000)
+            .logger(options.logger())
+            .build();
+    Blnk proxyBlnk =
+        new Blnk(
+            apiKey, proxyOptions, mockServices, HttpClientUtils.FORMAT_RESPONSE, capturedTransport);
+
+    proxyBlnk.request("ledgers", obj(), "POST", null);
+
+    assertEquals(
+        "https://api.cloud.blnkfinance.com/proxy/ledgers"
+            + "?instance_id=instance_073f7ffe-9dfd-42ce-aa50-d1dca1788adc",
+        capturedTransport.calls.get(0).url());
+  }
+
+  @Test
+  @DisplayName("Appends instance_id after existing query parameters")
+  void appendsInstanceIdAfterExistingQuery() {
+    CapturingTransport capturedTransport = CapturingTransport.of(TransportMocks.successTransport());
+    BlnkClientOptions proxyOptions =
+        BlnkClientOptions.builder()
+            .baseUrl("https://api.cloud.blnkfinance.com/proxy")
+            .instanceId("instance_073f7ffe-9dfd-42ce-aa50-d1dca1788adc")
+            .timeout(5000)
+            .logger(options.logger())
+            .build();
+    Blnk proxyBlnk =
+        new Blnk(
+            apiKey, proxyOptions, mockServices, HttpClientUtils.FORMAT_RESPONSE, capturedTransport);
+
+    proxyBlnk.request("ledgers?limit=10&offset=0", null, "GET", null);
+
+    assertEquals(
+        "https://api.cloud.blnkfinance.com/proxy/ledgers?limit=10&offset=0"
+            + "&instance_id=instance_073f7ffe-9dfd-42ce-aa50-d1dca1788adc",
+        capturedTransport.calls.get(0).url());
+  }
+
+  @Test
+  @DisplayName("Percent-encodes instance_id query values")
+  void encodesInstanceIdQueryParam() {
+    CapturingTransport capturedTransport = CapturingTransport.of(TransportMocks.successTransport());
+    BlnkClientOptions proxyOptions =
+        BlnkClientOptions.builder()
+            .baseUrl("https://api.cloud.blnkfinance.com/proxy")
+            .instanceId("instance id/with?special")
+            .timeout(5000)
+            .logger(options.logger())
+            .build();
+    Blnk proxyBlnk =
+        new Blnk(
+            apiKey, proxyOptions, mockServices, HttpClientUtils.FORMAT_RESPONSE, capturedTransport);
+
+    proxyBlnk.request("health", null, "GET", null);
+
+    assertEquals(
+        "https://api.cloud.blnkfinance.com/proxy/health"
+            + "?instance_id=instance%20id%2Fwith%3Fspecial",
+        capturedTransport.calls.get(0).url());
+  }
+
+  @Test
+  @DisplayName("withLogger keeps instanceId")
+  void withLoggerKeepsInstanceId() {
+    BlnkClientOptions original =
+        BlnkClientOptions.builder()
+            .baseUrl("https://api.cloud.blnkfinance.com/proxy")
+            .instanceId("instance_abc")
+            .build();
+    BlnkClientOptions copied = original.withLogger(options.logger());
+    assertEquals("instance_abc", copied.instanceId());
+  }
+
+  @Test
   @DisplayName("Does not expose public getApiKey getter")
   void noGetApiKey() {
     for (Method method : Blnk.class.getMethods()) {

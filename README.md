@@ -63,6 +63,20 @@ System.out.println("message: " + newLedger.message());  // "Success"
 System.out.println("ledger:  " + newLedger.data());     // parsed JSON body
 ```
 
+Cloud Proxy: same Core methods and bodies, with the Cloud proxy base URL and
+`instanceId`. Cloud routes with `instance_id` ([Proxy API](https://docs.blnkfinance.com/cloud/reference/proxy-api)):
+
+```java
+Blnk blnk = Blnk.init("<cloud_api_key_or_oauth_token>",
+    BlnkClientOptions.builder()
+        .baseUrl("https://api.cloud.blnkfinance.com/proxy")
+        .instanceId("instance_073f7ffe-9dfd-42ce-aa50-d1dca1788adc")
+        .build());
+```
+
+Use the instance id from Cloud (`instance_...`), not `deployment_id`. Self-hosted
+Core clients omit `instanceId`.
+
 A follow-up flow — create a balance and move money into it:
 
 ```java
@@ -171,6 +185,10 @@ Pass your Blnk secret key as the first argument to `Blnk.init`. When set, every 
 carries it in the `X-Blnk-Key` header; pass an empty string for unsecured self-hosted
 instances.
 
+For Cloud Proxy, pass a Cloud API key or OAuth access token as that first argument, set
+`baseUrl` to `https://api.cloud.blnkfinance.com/proxy`, and set `instanceId` to the
+target instance. Core request paths and bodies are unchanged.
+
 ## Services
 
 Services are created lazily and cached per client instance:
@@ -188,7 +206,8 @@ without fractional seconds (`2026-12-31T23:59:59Z`), the format Blnk Core expect
 
 | Option | Default | Notes |
 |---|---|---|
-| `baseUrl` | required | `IllegalArgumentException` if missing; `/` appended if absent |
+| `baseUrl` | required | `IllegalArgumentException` if missing; `/` appended if absent. Use `https://api.cloud.blnkfinance.com/proxy` for Cloud Proxy |
+| `instanceId` | unset | Cloud instance id (`instance_...`). When set, every request gets `instance_id` as a query parameter. Required for Proxy; omit for self-hosted Core |
 | `timeout` | `10000` ms | per attempt; a timeout produces a synthetic `408` response and is never retried |
 | `retryCount` | `1` | TOTAL attempts including the first; retries apply to `GET` requests only |
 | `retryDelayMs` | `2000` | linear backoff: `delay × attemptNumber` |
