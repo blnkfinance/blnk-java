@@ -23,6 +23,7 @@ import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.util.MultipartBody;
 import com.blnkfinance.blnk.util.RequestRetry;
 import com.blnkfinance.blnk.util.SafeLogMeta;
+import com.blnkfinance.blnk.util.UriEncoding;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.nio.charset.StandardCharsets;
@@ -49,7 +50,8 @@ public final class Blnk {
    * The client's stored options: the logger is kept separately, baseUrl has a
    * trailing slash appended, and the timeout/retry values are normalized.
    */
-  record StoredOptions(String baseUrl, double timeout, int retryCount, double retryDelayMs) {}
+  record StoredOptions(
+      String baseUrl, String instanceId, double timeout, int retryCount, double retryDelayMs) {}
 
   private static final ExecutorService TRANSPORT_EXECUTOR =
       Executors.newCachedThreadPool(runnable -> {
@@ -87,7 +89,14 @@ public final class Blnk {
         options.timeout() != null ? options.timeout() : ClientDefaults.DEFAULT_TIMEOUT_MS;
     int retryCount = RequestRetry.normalizeRetryCount(options.retryCount());
     double retryDelayMs = RequestRetry.normalizeRetryDelayMs(options.retryDelayMs());
-    this.options = new StoredOptions(baseUrl, timeout, retryCount, retryDelayMs);
+    String instanceId = options.instanceId();
+    this.options =
+        new StoredOptions(
+            baseUrl,
+            instanceId == null || instanceId.isEmpty() ? null : instanceId,
+            timeout,
+            retryCount,
+            retryDelayMs);
 
     // No logger configured → the plain console logger. Blnk.init injects a
     // CustomLogger first, so CONSOLE only appears when constructing Blnk
@@ -158,7 +167,9 @@ public final class Blnk {
     }
     headers.putAll(formDataHeaders);
 
-    String url = this.options.baseUrl() + endpoint;
+    String url =
+        UriEncoding.appendQueryParam(
+            this.options.baseUrl() + endpoint, "instance_id", this.options.instanceId());
 
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
       if (attempt > 1) {

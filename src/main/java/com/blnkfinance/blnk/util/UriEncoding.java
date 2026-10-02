@@ -27,4 +27,19 @@ public final class UriEncoding {
     }
     return sb.toString();
   }
+
+  /**
+   * Appends {@code name=value} to {@code url}. Uses {@code ?} when the URL has
+   * no query string yet, otherwise {@code &}. {@code value} is percent-encoded
+   * the same way as a path segment. A null or empty {@code value} leaves
+   * {@code url} unchanged so self-hosted Core calls are not given a Cloud
+   * routing param.
+   */
+  public static String appendQueryParam(String url, String name, String value) {
+    if (url == null || name == null || name.isEmpty() || value == null || value.isEmpty()) {
+      return url;
+    }
+    char separator = url.indexOf('?') >= 0 ? '&' : '?';
+    return url + separator + name + '=' + encodePathSegment(value);
+  }
 }

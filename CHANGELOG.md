@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Optional `instanceId` on `BlnkClientOptions` for [Cloud Proxy API](https://docs.blnkfinance.com/cloud/reference/proxy-api)
+  routing. When set, every request appends `instance_id` as a query parameter
+  (after existing query strings such as `limit`/`offset`). Use the Cloud proxy
+  base URL `https://api.cloud.blnkfinance.com/proxy` and a Cloud API key or
+  OAuth token; Core paths and bodies are unchanged. Self-hosted clients leave
+  `instanceId` unset.
+
 ## 1.5.0 — Core 0.15.4
 
 Aligns the Java SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfinance.com/changelog/blnk-core).
