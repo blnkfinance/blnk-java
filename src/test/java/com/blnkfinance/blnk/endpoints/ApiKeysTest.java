@@ -248,17 +248,30 @@ class ApiKeysTest {
 
       ApiResponse<JsonNode> response =
           apiKeys(capturedRequest)
-              .delete("api/key?id=1", DeleteApiKeyOptions.create().owner("merchant a&role=admin"));
+              .delete("api key=1&x", DeleteApiKeyOptions.create().owner("merchant a&role=admin"));
 
       assertEquals(
           List.of(
               new CapturingRequest.Call(
-                  "api-keys/api%2Fkey%3Fid%3D1?owner=merchant%20a%26role%3Dadmin",
+                  "api-keys/api%20key%3D1%26x?owner=merchant%20a%26role%3Dadmin",
                   null,
                   "DELETE",
                   null)),
           capturedRequest.calls);
       assertEquals(204, response.status());
+    }
+
+    @Test
+    @DisplayName("delete rejects an id containing / or ? without sending a request")
+    void deleteRejectsIdWithPathCharacters() {
+      CapturingRequest capturedRequest = CapturingRequest.of(respond(204, "Success", null));
+
+      ApiResponse<JsonNode> slash = apiKeys(capturedRequest).delete("api/key");
+      ApiResponse<JsonNode> query = apiKeys(capturedRequest).delete("api?key");
+
+      assertEquals(0, capturedRequest.calls.size());
+      assertEquals(400, slash.status());
+      assertEquals(400, query.status());
     }
 
     @Test

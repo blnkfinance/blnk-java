@@ -9,6 +9,7 @@ import com.blnkfinance.blnk.types.BlnkJson;
 import com.blnkfinance.blnk.types.FilterParams;
 import com.blnkfinance.blnk.types.SearchParams;
 import com.blnkfinance.blnk.types.StartReindexRequest;
+import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.validators.SearchValidators;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -70,7 +71,8 @@ public class Search {
         return formatResponse.format(400, paramsError, null, null);
       }
 
-      return request.call("search/" + service, data.toJson(), "POST", null);
+      return request.call(
+          "search/" + PathSegments.segment(service), data.toJson(), "POST", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "search");
     }
@@ -93,7 +95,8 @@ public class Search {
         return formatResponse.format(400, paramsError, null, null);
       }
 
-      return request.call(collection + "/filter", data.toJson(), "POST", null);
+      return request.call(
+          PathSegments.segment(collection) + "/filter", data.toJson(), "POST", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "filter");
     }

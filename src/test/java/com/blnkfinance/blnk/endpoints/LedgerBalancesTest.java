@@ -291,13 +291,25 @@ class LedgerBalancesTest {
     CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
     LedgerBalances ledgerBalance = service(capturedRequest);
 
-    ledgerBalance.getByIndicator("@user/name", "USD/EUR");
+    ledgerBalance.getByIndicator("@user name", "USD EUR");
 
     assertEquals(
         List.of(
             new CapturingRequest.Call(
-                "balances/indicator/%40user%2Fname/currency/USD%2FEUR", null, "GET", null)),
+                "balances/indicator/%40user%20name/currency/USD%20EUR", null, "GET", null)),
         capturedRequest.calls);
+  }
+
+  @Test
+  @DisplayName("getByIndicator rejects / in the indicator or currency without sending a request")
+  void getByIndicatorRejectsSlash() {
+    BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    LedgerBalances ledgerBalance = service(capturedRequest);
+
+    assertEquals(400, ledgerBalance.getByIndicator("@user/name", "USD").status());
+    assertEquals(400, ledgerBalance.getByIndicator("@user", "USD/EUR").status());
+    assertEquals(List.of(), capturedRequest.calls);
   }
 
   @Test

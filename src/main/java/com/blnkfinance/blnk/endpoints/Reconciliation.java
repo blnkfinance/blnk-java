@@ -7,6 +7,7 @@ import com.blnkfinance.blnk.types.ApiResponse;
 import com.blnkfinance.blnk.types.Matcher;
 import com.blnkfinance.blnk.types.RunInstantReconData;
 import com.blnkfinance.blnk.types.RunReconData;
+import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.util.MultipartBody;
 import com.blnkfinance.blnk.validators.ReconciliationValidators;
@@ -110,7 +111,7 @@ public class Reconciliation {
   /**
    * Updates a matching rule — a null or empty id is rejected BEFORE payload
    * validation; {@code PUT reconciliation/matching-rules/{ruleId}} with the
-   * id NOT URL-encoded.
+   * id validated and URL-encoded.
    */
   public ApiResponse<JsonNode> updateMatchingRule(String ruleId, Matcher data) {
     try {
@@ -124,7 +125,11 @@ public class Reconciliation {
         return formatResponse.format(400, validatorResponse, null, null);
       }
 
-      return request.call("reconciliation/matching-rules/" + ruleId, data.toJson(), "PUT", null);
+      return request.call(
+          "reconciliation/matching-rules/" + PathSegments.segment(ruleId),
+          data.toJson(),
+          "PUT",
+          null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "updateMatchingRule");
     }
@@ -132,8 +137,8 @@ public class Reconciliation {
 
   /**
    * Deletes a matching rule —
-   * {@code DELETE reconciliation/matching-rules/{ruleId}}, no body, id NOT
-   * URL-encoded.
+   * {@code DELETE reconciliation/matching-rules/{ruleId}}, no body, id
+   * validated and URL-encoded.
    */
   public ApiResponse<JsonNode> deleteMatchingRule(String ruleId) {
     try {
@@ -141,7 +146,8 @@ public class Reconciliation {
         return formatResponse.format(400, "matching rule id is required", null, null);
       }
 
-      return request.call("reconciliation/matching-rules/" + ruleId, null, "DELETE", null);
+      return request.call(
+          "reconciliation/matching-rules/" + PathSegments.segment(ruleId), null, "DELETE", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "deleteMatchingRule");
     }
@@ -183,7 +189,7 @@ public class Reconciliation {
   /**
    * Retrieves a reconciliation run —
    * {@code GET reconciliation/{reconciliationId}}. A null or empty id is
-   * rejected; no body; the id is NOT URL-encoded.
+   * rejected; no body; the id is validated and URL-encoded.
    */
   public ApiResponse<JsonNode> get(String reconciliationId) {
     try {
@@ -191,7 +197,8 @@ public class Reconciliation {
         return formatResponse.format(400, "reconciliation id is required", null, null);
       }
 
-      return request.call("reconciliation/" + reconciliationId, null, "GET", null);
+      return request.call(
+          "reconciliation/" + PathSegments.segment(reconciliationId), null, "GET", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "get");
     }

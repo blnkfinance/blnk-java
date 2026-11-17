@@ -12,6 +12,7 @@ import com.blnkfinance.blnk.types.GetBalanceRequest;
 import com.blnkfinance.blnk.types.UpdateBalanceIdentity;
 import com.blnkfinance.blnk.util.UriEncoding;
 import com.blnkfinance.blnk.util.ValueFormat;
+import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.validators.LedgerBalanceValidators;
 import com.blnkfinance.blnk.validators.ListValidators;
@@ -68,8 +69,8 @@ public class LedgerBalances {
   /**
    * Retrieves a balance — {@code GET balances/{id}}, plus query flags when
    * {@code options.from_source} and/or {@code options.with_queued} are set.
-   * Note: the {@code id} is never validated ({@code get("")} performs
-   * {@code GET balances/}) and is spliced into the path with NO URL-encoding.
+   * The {@code id} is validated and URL-encoded; an empty id returns
+   * {@code 400}.
    * Options validation runs only when options are provided ({@code null}
    * means "no options"). No body.
    */
@@ -83,7 +84,7 @@ public class LedgerBalances {
         }
       }
 
-      String endpoint = "balances/" + id;
+      String endpoint = "balances/" + PathSegments.segment(id);
       if (optionsMap != null) {
         java.util.List<String> params = new java.util.ArrayList<>();
         if (ValueFormat.isTruthy(optionsMap.get("from_source"))) {
@@ -131,7 +132,7 @@ public class LedgerBalances {
   /**
    * Retrieves a balance by indicator and currency —
    * {@code GET balances/indicator/{indicator}/currency/{currency}}. Both path
-   * segments are URL-encoded — the only encoded path segments in this class.
+   * segments are validated and URL-encoded.
    * No body.
    */
   public ApiResponse<JsonNode> getByIndicator(String indicator, String currency) {
@@ -142,8 +143,8 @@ public class LedgerBalances {
       }
 
       return request.call(
-          "balances/indicator/" + UriEncoding.encodePathSegment(indicator)
-              + "/currency/" + UriEncoding.encodePathSegment(currency),
+          "balances/indicator/" + PathSegments.segment(indicator)
+              + "/currency/" + PathSegments.segment(currency),
           null,
           "GET",
           null);
@@ -156,7 +157,7 @@ public class LedgerBalances {
    * Attaches an identity to a balance —
    * {@code PUT balances/{balanceId}/identity}. A null or empty
    * {@code balanceId} is rejected before payload validation; the data is then
-   * forwarded unmodified. The {@code balanceId} is NOT URL-encoded.
+   * forwarded unmodified. The {@code balanceId} is validated and URL-encoded.
    */
   public ApiResponse<JsonNode> updateIdentity(String balanceId, UpdateBalanceIdentity data) {
     try {
@@ -171,7 +172,8 @@ public class LedgerBalances {
         return formatResponse.format(400, error, null, null);
       }
 
-      return request.call("balances/" + balanceId + "/identity", data.toJson(), "PUT", null);
+      return request.call(
+          "balances/" + PathSegments.segment(balanceId) + "/identity", data.toJson(), "PUT", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "updateIdentity");
     }
@@ -223,7 +225,7 @@ public class LedgerBalances {
    * verbatim, and the literal {@code &from_source=true} is appended when
    * {@code options.from_source} is set. Note: from_source is never validated
    * here — any value {@code ValueFormat.isTruthy} accepts (e.g. the string
-   * {@code "true"}) appends the flag. The {@code balanceId} is NOT
+   * {@code "true"}) appends the flag. The {@code balanceId} is validated and
    * URL-encoded. No body.
    */
   public ApiResponse<JsonNode> getAt(String balanceId, GetBalanceAtRequest options) {
@@ -239,7 +241,7 @@ public class LedgerBalances {
       }
 
       String endpoint =
-          "balances/" + balanceId + "/at?timestamp="
+          "balances/" + PathSegments.segment(balanceId) + "/at?timestamp="
               + UriEncoding.encodePathSegment((String) optionsMap.get("timestamp"));
       if (ValueFormat.isTruthy(optionsMap.get("from_source"))) {
         endpoint += "&from_source=true";
@@ -254,7 +256,7 @@ public class LedgerBalances {
   /**
    * Retrieves a balance's lineage — {@code GET balances/{balanceId}/lineage}.
    * A null or empty {@code balanceId} is rejected; no validator, no body; the
-   * {@code balanceId} is NOT URL-encoded.
+   * {@code balanceId} is validated and URL-encoded.
    */
   public ApiResponse<JsonNode> getLineage(String balanceId) {
     try {
@@ -262,7 +264,8 @@ public class LedgerBalances {
         return formatResponse.format(400, "balance id is required", null, null);
       }
 
-      return request.call("balances/" + balanceId + "/lineage", null, "GET", null);
+      return request.call(
+          "balances/" + PathSegments.segment(balanceId) + "/lineage", null, "GET", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "getLineage");
     }

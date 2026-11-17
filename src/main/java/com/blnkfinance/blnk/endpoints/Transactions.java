@@ -14,6 +14,7 @@ import com.blnkfinance.blnk.types.RefundTransactionRequest;
 import com.blnkfinance.blnk.types.UpdateTransactionStatus;
 import com.blnkfinance.blnk.util.UriEncoding;
 import com.blnkfinance.blnk.util.ValueFormat;
+import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.util.TransactionSerialization;
 import com.blnkfinance.blnk.validators.ListValidators;
@@ -67,8 +68,8 @@ public class Transactions {
 
   /**
    * Updates an inflight transaction — {@code PUT transactions/inflight/{id}}.
-   * The body is forwarded as-is, never serialized; the id is neither
-   * validated nor URL-encoded.
+   * The body is forwarded as-is, never serialized; the id is validated and
+   * URL-encoded.
    */
   public ApiResponse<JsonNode> updateStatus(String id, UpdateTransactionStatus update) {
     try {
@@ -77,7 +78,8 @@ public class Transactions {
       if (validatorResponse != null) {
         return formatResponse.format(400, validatorResponse, null, null);
       }
-      return request.call("transactions/inflight/" + id, update.toJson(), "PUT", null);
+      return request.call(
+          "transactions/inflight/" + PathSegments.segment(id), update.toJson(), "PUT", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "updateStatus");
     }
@@ -92,7 +94,7 @@ public class Transactions {
    * Refunds a transaction — {@code POST refund-transaction/{id}}. The
    * validator runs only when options are provided; passing {@code null} means
    * "no options" and sends no body. The body, when present, is forwarded
-   * as-is; the id is neither validated nor URL-encoded.
+   * as-is; the id is validated and URL-encoded.
    */
   public ApiResponse<JsonNode> refund(String id, RefundTransactionRequest options) {
     try {
@@ -103,7 +105,8 @@ public class Transactions {
         }
       }
       return request.call(
-          "refund-transaction/" + id, options == null ? null : options.toJson(), "POST", null);
+          "refund-transaction/" + PathSegments.segment(id),
+          options == null ? null : options.toJson(), "POST", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "refund");
     }
@@ -111,15 +114,15 @@ public class Transactions {
 
   /**
    * Retrieves a transaction — {@code GET transactions/{transactionId}}. A null
-   * or empty id is rejected; the id is interpolated raw, without
-   * URL-encoding. No body.
+   * or empty id is rejected; the id is validated and URL-encoded. No body.
    */
   public ApiResponse<JsonNode> get(String transactionId) {
     try {
       if (transactionId == null || transactionId.isEmpty()) {
         return formatResponse.format(400, "transaction id is required", null, null);
       }
-      return request.call("transactions/" + transactionId, null, "GET", null);
+      return request.call(
+          "transactions/" + PathSegments.segment(transactionId), null, "GET", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "get");
     }
@@ -155,8 +158,9 @@ public class Transactions {
   /**
    * Retrieves a transaction by reference —
    * {@code GET transactions/reference/{reference}}. A null or empty reference
-   * is rejected; the reference IS URL-encoded — the only URL-encoded path
-   * segment in this class.
+   * is rejected. References are free-form, so {@code /} and {@code %} are
+   * URL-encoded rather than rejected; {@code .} and {@code ..} are rejected
+   * because encoding leaves them unchanged.
    */
   public ApiResponse<JsonNode> getByReference(String reference) {
     try {
@@ -164,7 +168,7 @@ public class Transactions {
         return formatResponse.format(400, "reference is required", null, null);
       }
       return request.call(
-          "transactions/reference/" + UriEncoding.encodePathSegment(reference), null, "GET", null);
+          "transactions/reference/" + PathSegments.reference(reference), null, "GET", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "getByReference");
     }
@@ -173,14 +177,15 @@ public class Transactions {
   /**
    * Retrieves a transaction's lineage —
    * {@code GET transactions/{transactionId}/lineage}. A null or empty id is
-   * rejected; the id is interpolated raw, without URL-encoding. No body.
+   * rejected; the id is validated and URL-encoded. No body.
    */
   public ApiResponse<JsonNode> getLineage(String transactionId) {
     try {
       if (transactionId == null || transactionId.isEmpty()) {
         return formatResponse.format(400, "transaction id is required", null, null);
       }
-      return request.call("transactions/" + transactionId + "/lineage", null, "GET", null);
+      return request.call(
+          "transactions/" + PathSegments.segment(transactionId) + "/lineage", null, "GET", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "getLineage");
     }

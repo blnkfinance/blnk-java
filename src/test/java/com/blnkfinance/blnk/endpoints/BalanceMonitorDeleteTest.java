@@ -65,13 +65,29 @@ class BalanceMonitorDeleteTest {
     BalanceMonitor balanceMonitor =
         new BalanceMonitor(capturedRequest, mockLogger, HttpClientUtils.FORMAT_RESPONSE);
 
-    balanceMonitor.delete("mon_test/special");
+    balanceMonitor.delete("mon_test special");
 
     assertEquals(
         List.of(
             new CapturingRequest.Call(
-                "balance-monitors/mon_test%2Fspecial", null, "DELETE", null)),
+                "balance-monitors/mon_test%20special", null, "DELETE", null)),
         capturedRequest.calls);
+  }
+
+  @Test
+  @DisplayName("delete rejects a monitor id containing / without sending a request")
+  void deleteRejectsMonitorIdWithSlash() {
+    BlnkLogger mockLogger = TestMocks.createMockLogger();
+    BlnkRequest thirdPartyRequest =
+        (endpoint, data, method, headers) -> new ApiResponse<>(200, "Success", deleteResponse);
+    CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+    BalanceMonitor balanceMonitor =
+        new BalanceMonitor(capturedRequest, mockLogger, HttpClientUtils.FORMAT_RESPONSE);
+
+    ApiResponse<JsonNode> response = balanceMonitor.delete("mon_test/special");
+
+    assertEquals(400, response.status());
+    assertEquals(List.of(), capturedRequest.calls);
   }
 
   @Test
