@@ -169,11 +169,19 @@ ApiResponse<JsonNode> usdBalances = blnk.ledgerBalances().list(
 
 ApiResponse<JsonNode> recentTransactions = blnk.transactions().list(
     ListOptions.create().limit(100));
+```
 
-// Identities take the same options. Core 0.15.9 only applies them when the
-// request also carries filters; otherwise it returns every identity.
-ApiResponse<JsonNode> identities = blnk.identity().list(
-    ListOptions.create().limit(20).offset(0));
+`identity().list()` returns every identity: Core 0.15.9 ignores `limit` and `offset`
+on `GET /identities` unless filters are also sent. To page identities, use the
+filter route (`POST /identities/filter`), which always applies `limit` (1–100,
+default 20) and `offset`:
+
+```java
+import com.blnkfinance.blnk.types.FilterParams;
+
+ApiResponse<JsonNode> identityPage = blnk.search().filter(
+    FilterParams.create().filters(java.util.List.of()).limit(20).offset(40),
+    "identities");
 ```
 
 Expand a balance's identity and ledger (`GET /balances/:id?include=identity&include=ledger`):

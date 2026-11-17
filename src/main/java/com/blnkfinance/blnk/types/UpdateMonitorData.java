@@ -19,6 +19,12 @@ import java.util.Map;
  *       with it, and then replies with {@code "precision_unchanged": true}.</li>
  * </ul>
  *
+ * <p>Checked before sending: at least one field must be set; {@code
+ * balance_id} must not be blank; {@code trigger} must be {@code edge} or
+ * {@code level}; a condition must set at least one key, {@code field} must be
+ * one of the six balance fields Core monitors, {@code value} must be a finite
+ * number, and {@code precision} a finite number greater than 0.
+ *
  * <p>There is no {@code call_back_url}: Core ignores it on update, so the
  * callback URL cannot be changed after creation.
  *

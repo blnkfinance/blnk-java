@@ -84,8 +84,16 @@ public final class BalanceMonitorValidators {
       return "Data must be a valid object of type UpdateMonitorData";
     }
 
-    if (data.containsKey("balance_id") && !StringUtils.isValidString(data.get("balance_id"))) {
-      return "balance_id must be a valid string if provided";
+    // An empty PUT is a silent no-op on Core; it is almost always a caller bug.
+    if (data.isEmpty()) {
+      return "at least one field must be set to update a monitor";
+    }
+
+    // Core reads "" as "keep the stored balance", so an empty id would look
+    // like a move but do nothing.
+    if (data.containsKey("balance_id")
+        && !(data.get("balance_id") instanceof String balanceId && !balanceId.isBlank())) {
+      return "balance_id must be a non-empty string if provided";
     }
 
     if (data.containsKey("description") && !StringUtils.isValidString(data.get("description"))) {
@@ -101,19 +109,27 @@ public final class BalanceMonitorValidators {
       if (!(data.get("condition") instanceof Map<?, ?> condition)) {
         return "condition must be a valid MonitorCondition object if provided";
       }
-      if (condition.containsKey("field") && !StringUtils.isValidString(condition.get("field"))) {
-        return "condition.field must be a valid string if provided";
+      if (condition.isEmpty()) {
+        return "condition must set at least one of field, operator, value or precision";
+      }
+      if (condition.containsKey("field") && !CONDITION_FIELDS.contains(condition.get("field"))) {
+        return "condition.field must be one of " + String.join(", ", CONDITION_FIELDS)
+            + " if provided";
       }
       if (condition.containsKey("operator")
           && !StringUtils.isValidOperator(condition.get("operator"))) {
         return "condition.operator must be one of != < <= = > >= if provided";
       }
-      if (condition.containsKey("value") && !StringUtils.isValidNumber(condition.get("value"))) {
-        return "condition.value must be a number if provided";
+      if (condition.containsKey("value") && !isFiniteNumber(condition.get("value"))) {
+        return "condition.value must be a finite number if provided";
       }
-      if (condition.containsKey("precision")
-          && !StringUtils.isValidNumber(condition.get("precision"))) {
-        return "condition.precision must be a number if provided";
+      if (condition.containsKey("precision") && !isPositiveFiniteNumber(condition.get("precision"))) {
+        return "condition.precision must be a finite number greater than 0 if provided";
+      }
+      for (Object key : condition.keySet()) {
+        if (!CONDITION_KEYS.contains(key)) {
+          return "Invalid condition field: " + key;
+        }
       }
     }
 
@@ -128,6 +144,26 @@ public final class BalanceMonitorValidators {
 
   private static final List<String> UPDATE_FIELDS =
       List.of("balance_id", "description", "trigger", "condition");
+
+  private static final List<String> CONDITION_KEYS =
+      List.of("field", "operator", "value", "precision");
+
+  /** The balance fields Core 0.15.9 can monitor ({@code AlertCondition.Validate}). */
+  private static final List<String> CONDITION_FIELDS = List.of(
+      "balance",
+      "credit_balance",
+      "debit_balance",
+      "inflight_balance",
+      "inflight_credit_balance",
+      "inflight_debit_balance");
+
+  private static boolean isFiniteNumber(Object value) {
+    return value instanceof Number number && Double.isFinite(number.doubleValue());
+  }
+
+  private static boolean isPositiveFiniteNumber(Object value) {
+    return isFiniteNumber(value) && ((Number) value).doubleValue() > 0;
+  }
 
   /**
    * Mirrors Core's {@code NormalizeTrigger}: an absent or empty trigger means
@@ -146,9 +182,10 @@ public final class BalanceMonitorValidators {
 
   /**
    * A condition is valid when it is a non-null map with a string
-   * {@code field}, one of the six supported {@code operator} symbols, and
-   * numeric {@code value} and {@code precision}. Any {@link Number} instance
-   * is accepted, including NaN and infinities.
+   * {@code field}, one of the six supported {@code operator} symbols, a
+   * finite numeric {@code value} and a finite numeric {@code precision}. NaN
+   * and infinities are rejected: they are not valid JSON numbers, so Core
+   * could never accept them.
    */
   private static boolean isValidCondition(Object condition) {
     if (ValueFormat.isFalsy(condition)) {
@@ -159,7 +196,7 @@ public final class BalanceMonitorValidators {
     }
     return StringUtils.isValidString(map.get("field"))
         && StringUtils.isValidOperator(map.get("operator"))
-        && StringUtils.isValidNumber(map.get("value"))
-        && StringUtils.isValidNumber(map.get("precision"));
+        && isFiniteNumber(map.get("value"))
+        && isFiniteNumber(map.get("precision"));
   }
 }

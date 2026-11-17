@@ -5,6 +5,7 @@ import com.blnkfinance.blnk.testsupport.TestMocks;
 import com.blnkfinance.blnk.types.ApiResponse;
 import com.blnkfinance.blnk.types.BlnkJson;
 import com.blnkfinance.blnk.types.CreateTransactions;
+import com.blnkfinance.blnk.types.FilterParams;
 import com.blnkfinance.blnk.types.GetBalanceRequest;
 import com.blnkfinance.blnk.types.ListOptions;
 import com.blnkfinance.blnk.types.MonitorCondition;
@@ -20,11 +21,13 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -234,6 +237,55 @@ class Core0159GapsTest {
     }
 
     @Test
+    @DisplayName("updatePartial rejects non-finite numbers, bad fields and empty bodies")
+    void rejectsMalformedPartialBodies() {
+      Harness h = new Harness(UPDATED);
+      Map<String, UpdateMonitorData> cases = new java.util.LinkedHashMap<>();
+      cases.put("condition.value must be a finite number if provided",
+          UpdateMonitorData.create().condition(MonitorCondition.create().value(Double.NaN)));
+      cases.put("condition.value must be a finite number if provided ",
+          UpdateMonitorData.create().condition(
+              MonitorCondition.create().value(Double.POSITIVE_INFINITY)));
+      cases.put("condition.precision must be a finite number greater than 0 if provided",
+          UpdateMonitorData.create().condition(
+              MonitorCondition.create().precision(Double.NEGATIVE_INFINITY)));
+      cases.put("condition.precision must be a finite number greater than 0 if provided ",
+          UpdateMonitorData.create().condition(MonitorCondition.create().precision(0)));
+      cases.put("condition.field must be one of balance, credit_balance, debit_balance, "
+              + "inflight_balance, inflight_credit_balance, inflight_debit_balance if provided",
+          UpdateMonitorData.create().condition(MonitorCondition.create().field("status")));
+      cases.put("condition must set at least one of field, operator, value or precision",
+          UpdateMonitorData.create().condition(MonitorCondition.create()));
+      cases.put("at least one field must be set to update a monitor",
+          UpdateMonitorData.create());
+      cases.put("balance_id must be a non-empty string if provided",
+          UpdateMonitorData.create().balanceId(" "));
+
+      cases.forEach((message, body) -> {
+        ApiResponse<JsonNode> response = h.blnk.balanceMonitor().updatePartial("mon_1", body);
+        assertEquals(400, response.status(), message);
+        assertEquals(message.strip(), response.message());
+      });
+      assertEquals(0, h.requestCount());
+    }
+
+    @Test
+    @DisplayName("create rejects NaN and infinite condition numbers without sending")
+    void createRejectsNonFiniteCondition() {
+      Harness h = new Harness("{}");
+
+      for (MonitorCondition condition : List.of(
+          belowHundredDollars().value(Double.NaN),
+          belowHundredDollars().precision(Double.POSITIVE_INFINITY))) {
+        ApiResponse<JsonNode> response = h.blnk.balanceMonitor().create(
+            MonitorData.create().balanceId("bln_1").condition(condition));
+        assertEquals(400, response.status());
+        assertEquals("condition must be a valid MonitorCondition object", response.message());
+      }
+      assertEquals(0, h.requestCount());
+    }
+
+    @Test
     @DisplayName("updatePartial validates the id and body before sending")
     void validatesBeforeSending() {
       Harness h = new Harness(UPDATED);
@@ -253,7 +305,7 @@ class Core0159GapsTest {
 
       ApiResponse<JsonNode> badValue = h.blnk.balanceMonitor().updatePartial(
           "mon_1", UpdateMonitorData.create().condition(MonitorCondition.create().value("ten")));
-      assertEquals("condition.value must be a number if provided", badValue.message());
+      assertEquals("condition.value must be a finite number if provided", badValue.message());
 
       assertEquals(0, h.requestCount());
     }
@@ -426,42 +478,33 @@ class Core0159GapsTest {
   }
 
   @Nested
-  @DisplayName("identity list pagination")
-  class IdentityListTests {
+  @DisplayName("identity pagination")
+  class IdentityPaginationTests {
 
     @Test
-    @DisplayName("list() sends no query string")
-    void listWithoutOptions() {
+    @DisplayName("identity().list() takes no ListOptions, because GET /identities ignores them")
+    void listHasNoListOptionsOverload() {
+      assertThrows(
+          NoSuchMethodException.class,
+          () -> com.blnkfinance.blnk.endpoints.Identity.class.getMethod("list", ListOptions.class));
+
       Harness h = new Harness("[]");
-
       h.blnk.identity().list();
-
       assertEquals(BASE + "identities", h.url());
     }
 
     @Test
-    @DisplayName("list(ListOptions) sends limit and offset")
-    void listWithOptions() {
-      Harness h = new Harness("[{\"identity_id\":\"idt_1\"}]");
+    @DisplayName("search().filter pages identities through POST /identities/filter")
+    void filterRoutePagesIdentities() {
+      Harness h = new Harness("[{\"identity_id\":\"idt_3\"}]");
 
-      ApiResponse<JsonNode> response =
-          h.blnk.identity().list(ListOptions.create().limit(5).offset(10));
+      ApiResponse<JsonNode> response = h.blnk.search().filter(
+          FilterParams.create().filters(List.of()).limit(2).offset(2), "identities");
 
-      assertEquals(BASE + "identities?limit=5&offset=10", h.url());
-      assertEquals("GET", h.method());
-      assertEquals("idt_1", response.data().get(0).get("identity_id").asText());
-    }
-
-    @Test
-    @DisplayName("list(ListOptions) rejects a negative offset without sending")
-    void listRejectsNegativeOffset() {
-      Harness h = new Harness("[]");
-
-      ApiResponse<JsonNode> response = h.blnk.identity().list(ListOptions.create().offset(-1));
-
-      assertEquals(400, response.status());
-      assertEquals("offset must be at least 0", response.message());
-      assertEquals(0, h.requestCount());
+      assertEquals(BASE + "identities/filter", h.url());
+      assertEquals("POST", h.method());
+      assertEquals(json("{\"filters\":[],\"limit\":2,\"offset\":2}"), h.body());
+      assertEquals("idt_3", response.data().get(0).get("identity_id").asText());
     }
   }
 

@@ -88,7 +88,13 @@ public final class UpdateTransactionStatus {
     return this;
   }
 
-  /** Sets an arbitrary extra field; unknown keys pass validation and are sent to the API. */
+  /**
+   * Sets an arbitrary extra field. Note that {@code transactions().updateStatus}
+   * only accepts {@code status}, {@code amount}, {@code precise_amount},
+   * {@code meta_data}, {@code skip_queue}, {@code dry_run} and
+   * {@code reference}; any other key returns {@code 400 Invalid field: <key>}
+   * without sending.
+   */
   public UpdateTransactionStatus putAdditional(String key, Object value) {
     fields.put(key, value);
     return this;

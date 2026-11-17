@@ -15,9 +15,11 @@ import com.fasterxml.jackson.databind.JsonNode;
  * Endpoint service for balance monitors: create, retrieve, list, update, and
  * delete monitors on Blnk Core.
  *
- * <p>Note: {@code get} and {@code update} interpolate the id raw (no
- * validation, no encoding; an empty id is allowed). {@code delete} and
- * {@code listByBalanceId} validate and percent-encode their path ids.
+ * <p>Every method that takes an id puts it through {@code PathSegments.segment},
+ * which validates and percent-encodes it; an id that is empty, {@code .} or
+ * {@code ..}, or contains {@code / \ ? # %} or a control character returns a
+ * {@code 400} and no request is sent. {@code delete} and {@code updatePartial}
+ * also reject an empty id with {@code monitor id is required} first.
  */
 public class BalanceMonitor {
 
