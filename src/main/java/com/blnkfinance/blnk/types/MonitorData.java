@@ -7,8 +7,11 @@ import java.util.Map;
 
 /**
  * Balance monitor payload: a required {@code condition} and
- * {@code balance_id} plus optional {@code description} and
- * {@code call_back_url}.
+ * {@code balance_id} plus optional {@code description},
+ * {@code call_back_url} and {@code trigger}.
+ *
+ * <p>To change an existing monitor, prefer {@link UpdateMonitorData}, which
+ * sends only the fields you set.
  *
  * <p>Unset fields are omitted from the serialized body entirely; wire names
  * are snake_case. Note: {@code MonitorData} intentionally has NO
@@ -41,6 +44,16 @@ public final class MonitorData {
 
   public MonitorData callBackUrl(String callBackUrl) {
     fields.put("call_back_url", callBackUrl);
+    return this;
+  }
+
+  /**
+   * {@link MonitorTrigger#EDGE} or {@link MonitorTrigger#LEVEL} (Core
+   * 0.15.7+). Leave unset for Core's default, edge. Any other value is
+   * rejected with a {@code 400} before a request is sent.
+   */
+  public MonitorData trigger(String trigger) {
+    fields.put("trigger", trigger);
     return this;
   }
 

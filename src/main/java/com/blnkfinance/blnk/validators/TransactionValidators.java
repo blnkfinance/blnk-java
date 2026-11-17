@@ -474,6 +474,18 @@ public final class TransactionValidators {
       return "Allow overdraft must be a boolean if provided.";
     }
 
+    if (data.containsKey("overdraft_limit")) {
+      Object overdraftLimit = data.get("overdraft_limit");
+      if (!(overdraftLimit instanceof Number limit)
+          || Double.isNaN(limit.doubleValue())
+          || Double.isInfinite(limit.doubleValue())) {
+        return "overdraft_limit must be a number if provided.";
+      }
+      if (limit.doubleValue() < 0) {
+        return "overdraft_limit must be zero or more.";
+      }
+    }
+
     if (data.containsKey("meta_data")
         && !LedgerBalanceValidators.isValidMetaData(data.get("meta_data"))) {
       // No trailing period — callers depend on the exact text.
@@ -798,8 +810,12 @@ public final class TransactionValidators {
       return "dry_run must be a boolean if provided.";
     }
 
-    List<String> allowedFields =
-        List.of("status", "amount", "precise_amount", "meta_data", "skip_queue", "dry_run");
+    if (data.containsKey("reference") && !StringUtils.isValidString(data.get("reference"))) {
+      return "reference must be a string if provided.";
+    }
+
+    List<String> allowedFields = List.of(
+        "status", "amount", "precise_amount", "meta_data", "skip_queue", "dry_run", "reference");
     for (String key : data.keySet()) { // Insertion order decides which field is reported.
       if (!allowedFields.contains(key)) {
         return "Invalid field: " + key; // No trailing period — callers depend on the text.

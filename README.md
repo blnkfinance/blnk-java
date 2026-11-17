@@ -169,6 +169,92 @@ ApiResponse<JsonNode> usdBalances = blnk.ledgerBalances().list(
 
 ApiResponse<JsonNode> recentTransactions = blnk.transactions().list(
     ListOptions.create().limit(100));
+
+// Identities take the same options. Core 0.15.9 only applies them when the
+// request also carries filters; otherwise it returns every identity.
+ApiResponse<JsonNode> identities = blnk.identity().list(
+    ListOptions.create().limit(20).offset(0));
+```
+
+Expand a balance's identity and ledger (`GET /balances/:id?include=identity&include=ledger`):
+
+```java
+import com.blnkfinance.blnk.types.GetBalanceRequest;
+
+String balanceId = balance.data().get("balance_id").asText();
+
+ApiResponse<JsonNode> expanded = blnk.ledgerBalances().get(
+    balanceId,
+    GetBalanceRequest.create()
+        .include(GetBalanceRequest.INCLUDE_IDENTITY, GetBalanceRequest.INCLUDE_LEDGER));
+
+JsonNode owner = expanded.data().get("identity");
+```
+
+Watch a balance. The condition `value` is in major units, like a transaction
+`amount`: Core stores `precise_value = value × precision`, so $100 on a USD
+balance is `value(100)` with `precision(100)`:
+
+```java
+import com.blnkfinance.blnk.types.MonitorCondition;
+import com.blnkfinance.blnk.types.MonitorData;
+import com.blnkfinance.blnk.types.MonitorTrigger;
+
+ApiResponse<JsonNode> monitor = blnk.balanceMonitor().create(
+    MonitorData.create()
+        .balanceId(balanceId)
+        .description("Below $100")
+        .callBackUrl("https://example.com/hooks/low-balance")
+        .condition(MonitorCondition.create()
+            .field("balance")
+            .operator("<")
+            .value(100)       // $100, not 10000
+            .precision(100))
+        .trigger(MonitorTrigger.EDGE)); // the default: alert once per crossing.
+                                        // LEVEL alerts on every update while it holds.
+```
+
+Change a monitor with `updatePartial` (Core 0.15.9+). Only the fields you set are
+sent, and Core keeps the rest. The callback URL can't be changed after creation:
+
+```java
+import com.blnkfinance.blnk.types.UpdateMonitorData;
+
+String monitorId = monitor.data().get("monitor_id").asText();
+
+ApiResponse<JsonNode> updated = blnk.balanceMonitor().updatePartial(
+    monitorId,
+    UpdateMonitorData.create()
+        .description("Below $250")
+        .condition(MonitorCondition.create().value(250))); // keeps field, operator, precision
+
+// Core replies {"message": ..., "precision_unchanged": true} when a precision was
+// sent without a value and it kept the stored one.
+```
+
+Commit or void an inflight transaction idempotently with a `reference` (Core 0.15.7+),
+and cap an overdraft with `overdraftLimit` (major units):
+
+```java
+import com.blnkfinance.blnk.types.UpdateTransactionStatus;
+
+String inflightId = "<transaction_id of an inflight transaction>";
+
+blnk.transactions().updateStatus(
+    inflightId,
+    UpdateTransactionStatus.create().status("commit").reference("commit-" + inflightId));
+
+blnk.transactions().create(
+    CreateTransactions.create()
+        .amount(50)
+        .precision(100)
+        .currency("USD")
+        .reference("ref_overdraft_001")
+        .description("Card spend")
+        .source(balanceId)
+        .destination("@CardSettlement")
+        .allowOverdraft(true)
+        .overdraftLimit(200)); // the source may go down to -$200
 ```
 
 List monitors for one balance (`GET /balance-monitors/balances/:balance_id`; Core

@@ -28,6 +28,38 @@
   base URL `https://api.cloud.blnkfinance.com/proxy` and a Cloud API key or
   OAuth token; Core paths and bodies are unchanged. Self-hosted clients leave
   `instanceId` unset.
+- Alignment with Blnk Core 0.15.9:
+  - `MonitorData.trigger(...)` with `MonitorTrigger.EDGE` / `MonitorTrigger.LEVEL`
+    (Core 0.15.7+). Any other value returns a `400` before sending; an unset or
+    empty trigger leaves Core's default, edge. Monitors read back already
+    include `condition_state` and `condition.precise_value` in the response JSON.
+  - `balanceMonitor().updatePartial(id, UpdateMonitorData)`. It sends only the
+    fields you set, and Core 0.15.9 keeps the rest, so a threshold can be moved
+    to 0 and a description cleared with `""`. There is no `call_back_url`,
+    because Core ignores it on update. Core replies with `message` and, when it
+    kept the stored precision, `precision_unchanged`.
+  - `UpdateTransactionStatus.reference(...)` for idempotent inflight commit and
+    void (Core 0.15.7+). Before, the validator rejected `reference` as an
+    unknown field.
+  - `CreateTransactions.overdraftLimit(...)`, in major units. Negative values
+    return a `400`.
+  - `GetBalanceRequest.include(...)` with `INCLUDE_IDENTITY` / `INCLUDE_LEDGER`,
+    sent as repeated `include` query parameters.
+  - `identity().list(ListOptions)`, matching ledgers, balances and transactions.
+    Core 0.15.9 only applies `limit`/`offset` on this route when filters are
+    also sent.
+
+### Deprecated
+
+- `balanceMonitor().update(id, MonitorData)`. It still works; use
+  `updatePartial`.
+- `GetBalanceRequest.fromSource(...)`. `GET /balances/{id}` ignores
+  `from_source`; it only applies to `getAt`. The flag is still sent.
+
+### Docs
+
+- The README now has a balance monitor example with the right units: `value`
+  is in major units, so $100 is `value(100)` with `precision(100)`.
 
 ## 1.5.0 — Core 0.15.4
 

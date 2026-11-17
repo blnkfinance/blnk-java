@@ -5,6 +5,7 @@ import com.blnkfinance.blnk.BlnkRequest;
 import com.blnkfinance.blnk.FormatResponseFn;
 import com.blnkfinance.blnk.types.ApiResponse;
 import com.blnkfinance.blnk.types.MonitorData;
+import com.blnkfinance.blnk.types.UpdateMonitorData;
 import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.validators.BalanceMonitorValidators;
@@ -103,7 +104,14 @@ public class BalanceMonitor {
    * the data, then validates and URL-encodes the id, then forwards
    * {@code data} unmodified. Never throws: runtime errors are converted to an
    * error response, reported under the name {@code "update"}.
+   *
+   * @deprecated This requires a full {@link MonitorData}, so every change
+   *     resends the whole monitor, and Core ignores the {@code call_back_url}
+   *     it carries. Core 0.15.9+ keeps any field a {@code PUT} leaves out: use
+   *     {@link #updatePartial(String, UpdateMonitorData)}, which sends only the
+   *     fields you set. This method keeps working.
    */
+  @Deprecated
   public ApiResponse<JsonNode> update(String id, MonitorData data) {
     try {
       String validatorResponse =
@@ -115,6 +123,37 @@ public class BalanceMonitor {
           "balance-monitors/" + PathSegments.segment(id), data.toJson(), "PUT", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "update");
+    }
+  }
+
+  /**
+   * Partially updates a balance monitor — {@code PUT balance-monitors/{id}}
+   * with only the fields set on {@code data} (Core 0.15.9+). Fields left
+   * unset keep their stored values. Validates the id and the body, then
+   * sends the body unmodified.
+   *
+   * <p>Core replies with {@code {"message": ...}}, plus
+   * {@code "precision_unchanged": true} when a precision was sent without a
+   * value and Core kept the stored precision.
+   *
+   * <p>Never throws: runtime errors are converted to an error response,
+   * reported under the name {@code "updatePartial"}.
+   */
+  public ApiResponse<JsonNode> updatePartial(String id, UpdateMonitorData data) {
+    try {
+      String idError = BalanceMonitorValidators.validateMonitorId(id);
+      if (idError != null) {
+        return formatResponse.format(400, idError, null, null);
+      }
+      String validatorResponse =
+          BalanceMonitorValidators.validateUpdateMonitorData(data == null ? null : data.toMap());
+      if (validatorResponse != null) {
+        return formatResponse.format(400, validatorResponse, null, null);
+      }
+      return request.call(
+          "balance-monitors/" + PathSegments.segment(id), data.toJson(), "PUT", null);
+    } catch (RuntimeException error) {
+      return Loggers.handleError(error, logger, formatResponse, "updatePartial");
     }
   }
 

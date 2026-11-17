@@ -1,8 +1,10 @@
 package com.blnkfinance.blnk.validators;
 
+import com.blnkfinance.blnk.types.MonitorTrigger;
 import com.blnkfinance.blnk.util.ValueFormat;
 import com.blnkfinance.blnk.util.StringUtils;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -62,7 +64,83 @@ public final class BalanceMonitorValidators {
       return "call_back_url must be a valid string if provided";
     }
 
+    String triggerError = validateTrigger(data);
+    if (triggerError != null) {
+      return triggerError;
+    }
+
     // If all validations pass, return null
+    return null;
+  }
+
+  /**
+   * Validates the body of a partial monitor update ({@code
+   * BalanceMonitor.updatePartial}). Every field is optional, but each one that
+   * is present must be well-formed. {@code call_back_url} is rejected because
+   * Core ignores it on update.
+   */
+  public static String validateUpdateMonitorData(Map<String, Object> data) {
+    if (data == null) {
+      return "Data must be a valid object of type UpdateMonitorData";
+    }
+
+    if (data.containsKey("balance_id") && !StringUtils.isValidString(data.get("balance_id"))) {
+      return "balance_id must be a valid string if provided";
+    }
+
+    if (data.containsKey("description") && !StringUtils.isValidString(data.get("description"))) {
+      return "description must be a valid string if provided";
+    }
+
+    String triggerError = validateTrigger(data);
+    if (triggerError != null) {
+      return triggerError;
+    }
+
+    if (data.containsKey("condition")) {
+      if (!(data.get("condition") instanceof Map<?, ?> condition)) {
+        return "condition must be a valid MonitorCondition object if provided";
+      }
+      if (condition.containsKey("field") && !StringUtils.isValidString(condition.get("field"))) {
+        return "condition.field must be a valid string if provided";
+      }
+      if (condition.containsKey("operator")
+          && !StringUtils.isValidOperator(condition.get("operator"))) {
+        return "condition.operator must be one of != < <= = > >= if provided";
+      }
+      if (condition.containsKey("value") && !StringUtils.isValidNumber(condition.get("value"))) {
+        return "condition.value must be a number if provided";
+      }
+      if (condition.containsKey("precision")
+          && !StringUtils.isValidNumber(condition.get("precision"))) {
+        return "condition.precision must be a number if provided";
+      }
+    }
+
+    for (String key : data.keySet()) {
+      if (!UPDATE_FIELDS.contains(key)) {
+        return "Invalid field: " + key;
+      }
+    }
+
+    return null;
+  }
+
+  private static final List<String> UPDATE_FIELDS =
+      List.of("balance_id", "description", "trigger", "condition");
+
+  /**
+   * Mirrors Core's {@code NormalizeTrigger}: an absent or empty trigger means
+   * "not set" (edge on create, the stored mode on update); anything else must
+   * be exactly {@code edge} or {@code level}, case-sensitive.
+   */
+  private static String validateTrigger(Map<String, Object> data) {
+    if (!data.containsKey("trigger") || "".equals(data.get("trigger"))) {
+      return null;
+    }
+    if (!MonitorTrigger.VALUES.contains(data.get("trigger"))) {
+      return "trigger must be either \"edge\" or \"level\" if provided";
+    }
     return null;
   }
 
