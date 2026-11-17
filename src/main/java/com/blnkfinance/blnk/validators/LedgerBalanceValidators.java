@@ -1,8 +1,10 @@
 package com.blnkfinance.blnk.validators;
 
+import com.blnkfinance.blnk.types.GetBalanceRequest;
 import com.blnkfinance.blnk.util.StringUtils;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -163,6 +165,17 @@ public final class LedgerBalanceValidators {
 
     if (data.containsKey("with_queued") && !(data.get("with_queued") instanceof Boolean)) {
       return "with_queued must be a boolean if provided";
+    }
+
+    if (data.containsKey("include")) {
+      if (!(data.get("include") instanceof List<?> include)) {
+        return "include must be a list if provided";
+      }
+      for (Object value : include) {
+        if (!GetBalanceRequest.INCLUDE_VALUES.contains(value)) {
+          return "include values must be \"identity\" or \"ledger\"";
+        }
+      }
     }
 
     return null;

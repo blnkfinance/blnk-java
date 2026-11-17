@@ -1,8 +1,10 @@
 package com.blnkfinance.blnk.validators;
 
+import com.blnkfinance.blnk.types.MonitorTrigger;
 import com.blnkfinance.blnk.util.ValueFormat;
 import com.blnkfinance.blnk.util.StringUtils;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -62,15 +64,128 @@ public final class BalanceMonitorValidators {
       return "call_back_url must be a valid string if provided";
     }
 
+    String triggerError = validateTrigger(data);
+    if (triggerError != null) {
+      return triggerError;
+    }
+
     // If all validations pass, return null
     return null;
   }
 
   /**
+   * Validates the body of a partial monitor update ({@code
+   * BalanceMonitor.updatePartial}). Every field is optional, but each one that
+   * is present must be well-formed. {@code call_back_url} is rejected because
+   * Core ignores it on update.
+   */
+  public static String validateUpdateMonitorData(Map<String, Object> data) {
+    if (data == null) {
+      return "Data must be a valid object of type UpdateMonitorData";
+    }
+
+    // An empty PUT is a silent no-op on Core; it is almost always a caller bug.
+    if (data.isEmpty()) {
+      return "at least one field must be set to update a monitor";
+    }
+
+    // Core reads "" as "keep the stored balance", so an empty id would look
+    // like a move but do nothing.
+    if (data.containsKey("balance_id")
+        && !(data.get("balance_id") instanceof String balanceId && !balanceId.isBlank())) {
+      return "balance_id must be a non-empty string if provided";
+    }
+
+    if (data.containsKey("description") && !StringUtils.isValidString(data.get("description"))) {
+      return "description must be a valid string if provided";
+    }
+
+    String triggerError = validateTrigger(data);
+    if (triggerError != null) {
+      return triggerError;
+    }
+
+    if (data.containsKey("condition")) {
+      if (!(data.get("condition") instanceof Map<?, ?> condition)) {
+        return "condition must be a valid MonitorCondition object if provided";
+      }
+      if (condition.isEmpty()) {
+        return "condition must set at least one of field, operator, value or precision";
+      }
+      if (condition.containsKey("field") && !CONDITION_FIELDS.contains(condition.get("field"))) {
+        return "condition.field must be one of " + String.join(", ", CONDITION_FIELDS)
+            + " if provided";
+      }
+      if (condition.containsKey("operator")
+          && !StringUtils.isValidOperator(condition.get("operator"))) {
+        return "condition.operator must be one of != < <= = > >= if provided";
+      }
+      if (condition.containsKey("value") && !isFiniteNumber(condition.get("value"))) {
+        return "condition.value must be a finite number if provided";
+      }
+      if (condition.containsKey("precision") && !isPositiveFiniteNumber(condition.get("precision"))) {
+        return "condition.precision must be a finite number greater than 0 if provided";
+      }
+      for (Object key : condition.keySet()) {
+        if (!CONDITION_KEYS.contains(key)) {
+          return "Invalid condition field: " + key;
+        }
+      }
+    }
+
+    for (String key : data.keySet()) {
+      if (!UPDATE_FIELDS.contains(key)) {
+        return "Invalid field: " + key;
+      }
+    }
+
+    return null;
+  }
+
+  private static final List<String> UPDATE_FIELDS =
+      List.of("balance_id", "description", "trigger", "condition");
+
+  private static final List<String> CONDITION_KEYS =
+      List.of("field", "operator", "value", "precision");
+
+  /** The balance fields Core 0.15.9 can monitor ({@code AlertCondition.Validate}). */
+  private static final List<String> CONDITION_FIELDS = List.of(
+      "balance",
+      "credit_balance",
+      "debit_balance",
+      "inflight_balance",
+      "inflight_credit_balance",
+      "inflight_debit_balance");
+
+  private static boolean isFiniteNumber(Object value) {
+    return value instanceof Number number && Double.isFinite(number.doubleValue());
+  }
+
+  private static boolean isPositiveFiniteNumber(Object value) {
+    return isFiniteNumber(value) && ((Number) value).doubleValue() > 0;
+  }
+
+  /**
+   * Mirrors Core's {@code NormalizeTrigger}: an absent or empty trigger means
+   * "not set" (edge on create, the stored mode on update); anything else must
+   * be exactly {@code edge} or {@code level}, case-sensitive.
+   */
+  private static String validateTrigger(Map<String, Object> data) {
+    if (!data.containsKey("trigger") || "".equals(data.get("trigger"))) {
+      return null;
+    }
+    if (!MonitorTrigger.VALUES.contains(data.get("trigger"))) {
+      return "trigger must be either \"edge\" or \"level\" if provided";
+    }
+    return null;
+  }
+
+  /**
    * A condition is valid when it is a non-null map with a string
-   * {@code field}, one of the six supported {@code operator} symbols, and
-   * numeric {@code value} and {@code precision}. Any {@link Number} instance
-   * is accepted, including NaN and infinities.
+   * {@code field}, one of the six supported {@code operator} symbols, a
+   * finite numeric {@code value} and a finite numeric {@code precision}. NaN
+   * and infinities are rejected: they are not valid JSON numbers, so Core
+   * could never accept them.
    */
   private static boolean isValidCondition(Object condition) {
     if (ValueFormat.isFalsy(condition)) {
@@ -81,7 +196,7 @@ public final class BalanceMonitorValidators {
     }
     return StringUtils.isValidString(map.get("field"))
         && StringUtils.isValidOperator(map.get("operator"))
-        && StringUtils.isValidNumber(map.get("value"))
-        && StringUtils.isValidNumber(map.get("precision"));
+        && isFiniteNumber(map.get("value"))
+        && isFiniteNumber(map.get("precision"));
   }
 }

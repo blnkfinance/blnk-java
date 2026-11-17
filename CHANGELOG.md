@@ -28,6 +28,52 @@
   base URL `https://api.cloud.blnkfinance.com/proxy` and a Cloud API key or
   OAuth token; Core paths and bodies are unchanged. Self-hosted clients leave
   `instanceId` unset.
+- Alignment with Blnk Core 0.15.9:
+  - `MonitorData.trigger(...)` with `MonitorTrigger.EDGE` / `MonitorTrigger.LEVEL`
+    (Core 0.15.7+). Any other value returns a `400` before sending; an unset or
+    empty trigger leaves Core's default, edge. Monitors read back already
+    include `condition_state` and `condition.precise_value` in the response JSON.
+  - `balanceMonitor().updatePartial(id, UpdateMonitorData)`. It sends only the
+    fields you set, and Core 0.15.9 keeps the rest, so a threshold can be moved
+    to 0 and a description cleared with `""`. There is no `call_back_url`,
+    because Core ignores it on update. Core replies with `message` and, when it
+    kept the stored precision, `precision_unchanged`. It returns a `400`
+    without sending for an empty update, an empty condition, a blank
+    `balance_id`, a `field` Core doesn't monitor, a non-finite `value`, or a
+    `precision` that isn't a finite number above 0.
+  - `UpdateTransactionStatus.reference(...)` for idempotent inflight commit and
+    void (Core 0.15.7+). Before, the validator rejected `reference` as an
+    unknown field. A blank or whitespace-only reference returns a `400`,
+    because Core treats an empty one as "no reference" and the call would not
+    be idempotent. So does one with leading or trailing whitespace: Core
+    compares keys exactly, so `"ref"` and `"ref "` would be different keys.
+  - `CreateTransactions.overdraftLimit(...)`, in major units. A negative, NaN
+    or infinite value returns a `400`, on `create` and on every `createBulk`
+    item.
+  - `GetBalanceRequest.include(...)` with `INCLUDE_IDENTITY` / `INCLUDE_LEDGER`,
+    sent as repeated `include` query parameters.
+
+### Changed
+
+- `balanceMonitor().create` and `update` now reject a NaN or infinite
+  condition `value` or `precision` with a `400` before sending. Before, they
+  were sent and Core rejected them.
+
+### Deprecated
+
+- `balanceMonitor().update(id, MonitorData)`. It still works; use
+  `updatePartial`.
+- `GetBalanceRequest.fromSource(...)`. `GET /balances/{id}` ignores
+  `from_source`; it only applies to `getAt`. The flag is still sent.
+
+### Docs
+
+- The README now has a balance monitor example with the right units: `value`
+  is in major units, so $100 is `value(100)` with `precision(100)`.
+- `identity().list()` documents that it returns every identity, and the README
+  shows how to page identities with `search().filter(..., "identities")`.
+  Core 0.15.9 ignores `limit`/`offset` on `GET /identities` unless filters are
+  also sent, so `identity().list()` takes no `ListOptions`.
 
 ## 1.5.0 — Core 0.15.4
 

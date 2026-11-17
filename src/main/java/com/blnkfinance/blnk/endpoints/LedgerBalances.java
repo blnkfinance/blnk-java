@@ -68,7 +68,9 @@ public class LedgerBalances {
 
   /**
    * Retrieves a balance — {@code GET balances/{id}}, plus query flags when
-   * {@code options.from_source} and/or {@code options.with_queued} are set.
+   * {@code options.from_source} and/or {@code options.with_queued} are set,
+   * and one {@code include=...} per value of {@code options.include} (Core
+   * then adds the {@code identity} and/or {@code ledger} objects).
    * The {@code id} is validated and URL-encoded; an empty id returns
    * {@code 400}.
    * Options validation runs only when options are provided ({@code null}
@@ -92,6 +94,11 @@ public class LedgerBalances {
         }
         if (ValueFormat.isTruthy(optionsMap.get("with_queued"))) {
           params.add("with_queued=true");
+        }
+        if (optionsMap.get("include") instanceof java.util.List<?> include) {
+          for (Object value : include) {
+            params.add("include=" + UriEncoding.encodePathSegment(String.valueOf(value)));
+          }
         }
         if (!params.isEmpty()) {
           endpoint += "?" + String.join("&", params);

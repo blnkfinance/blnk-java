@@ -12,6 +12,14 @@ import java.util.Map;
  * <p>Unset fields are absent keys; wire names are snake_case. {@code value}
  * also accepts a raw {@code Object} so wrong-typed input (e.g. a string) can
  * reach the validator.
+ *
+ * <p>{@code value} is in major units: Core stores {@code precise_value =
+ * value × precision}. A $100 threshold on a USD balance is {@code value(100)}
+ * with {@code precision(100)}, not {@code value(10000)}. Monitors read back
+ * from Core also carry the computed {@code precise_value}.
+ *
+ * <p>The same builder is used by {@link UpdateMonitorData}, where every field
+ * is optional and only the ones set are sent.
  */
 public final class MonitorCondition {
 

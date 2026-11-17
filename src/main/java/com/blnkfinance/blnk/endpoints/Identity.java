@@ -71,7 +71,21 @@ public class Identity {
     }
   }
 
-  /** Lists identities — {@code GET identities}, no body. */
+  /**
+   * Lists identities — {@code GET identities}, no body, no query string.
+   *
+   * <p>This returns every identity: Core 0.15.9 only pages {@code GET
+   * identities} when filter query parameters are also sent, so this method
+   * takes no {@code ListOptions}. To page through identities, use the filter
+   * route, which always applies {@code limit} (1–100, default 20) and
+   * {@code offset}:
+   *
+   * <pre>{@code
+   * blnk.search().filter(
+   *     FilterParams.create().filters(List.of()).limit(20).offset(40),
+   *     "identities");
+   * }</pre>
+   */
   public ApiResponse<JsonNode> list() {
     try {
       return request.call("identities", null, "GET", null);

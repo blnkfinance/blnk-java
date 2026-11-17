@@ -160,6 +160,17 @@ public final class CreateTransactions {
     return this;
   }
 
+  /**
+   * How far below zero the source may go, in major units like {@code amount}
+   * (Core multiplies it by {@code precision}). With {@code
+   * allowOverdraft(true)} and no limit, or a limit of 0, the overdraft is
+   * unlimited. Must be zero or more.
+   */
+  public CreateTransactions overdraftLimit(double overdraftLimit) {
+    fields.put("overdraft_limit", overdraftLimit);
+    return this;
+  }
+
   public CreateTransactions metaData(Map<String, Object> metaData) {
     fields.put("meta_data", metaData);
     return this;

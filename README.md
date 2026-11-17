@@ -171,6 +171,100 @@ ApiResponse<JsonNode> recentTransactions = blnk.transactions().list(
     ListOptions.create().limit(100));
 ```
 
+`identity().list()` returns every identity: Core 0.15.9 ignores `limit` and `offset`
+on `GET /identities` unless filters are also sent. To page identities, use the
+filter route (`POST /identities/filter`), which always applies `limit` (1–100,
+default 20) and `offset`:
+
+```java
+import com.blnkfinance.blnk.types.FilterParams;
+
+ApiResponse<JsonNode> identityPage = blnk.search().filter(
+    FilterParams.create().filters(java.util.List.of()).limit(20).offset(40),
+    "identities");
+```
+
+Expand a balance's identity and ledger (`GET /balances/:id?include=identity&include=ledger`):
+
+```java
+import com.blnkfinance.blnk.types.GetBalanceRequest;
+
+String balanceId = balance.data().get("balance_id").asText();
+
+ApiResponse<JsonNode> expanded = blnk.ledgerBalances().get(
+    balanceId,
+    GetBalanceRequest.create()
+        .include(GetBalanceRequest.INCLUDE_IDENTITY, GetBalanceRequest.INCLUDE_LEDGER));
+
+JsonNode owner = expanded.data().get("identity");
+```
+
+Watch a balance. The condition `value` is in major units, like a transaction
+`amount`: Core stores `precise_value = value × precision`, so $100 on a USD
+balance is `value(100)` with `precision(100)`:
+
+```java
+import com.blnkfinance.blnk.types.MonitorCondition;
+import com.blnkfinance.blnk.types.MonitorData;
+import com.blnkfinance.blnk.types.MonitorTrigger;
+
+ApiResponse<JsonNode> monitor = blnk.balanceMonitor().create(
+    MonitorData.create()
+        .balanceId(balanceId)
+        .description("Below $100")
+        .callBackUrl("https://example.com/hooks/low-balance")
+        .condition(MonitorCondition.create()
+            .field("balance")
+            .operator("<")
+            .value(100)       // $100, not 10000
+            .precision(100))
+        .trigger(MonitorTrigger.EDGE)); // the default: alert once per crossing.
+                                        // LEVEL alerts on every update while it holds.
+```
+
+Change a monitor with `updatePartial` (Core 0.15.9+). Only the fields you set are
+sent, and Core keeps the rest. The callback URL can't be changed after creation:
+
+```java
+import com.blnkfinance.blnk.types.UpdateMonitorData;
+
+String monitorId = monitor.data().get("monitor_id").asText();
+
+ApiResponse<JsonNode> updated = blnk.balanceMonitor().updatePartial(
+    monitorId,
+    UpdateMonitorData.create()
+        .description("Below $250")
+        .condition(MonitorCondition.create().value(250))); // keeps field, operator, precision
+
+// Core replies {"message": ..., "precision_unchanged": true} when a precision was
+// sent without a value and it kept the stored one.
+```
+
+Commit or void an inflight transaction idempotently with a `reference` (Core 0.15.7+),
+and cap an overdraft with `overdraftLimit` (major units):
+
+```java
+import com.blnkfinance.blnk.types.UpdateTransactionStatus;
+
+String inflightId = "<transaction_id of an inflight transaction>";
+
+blnk.transactions().updateStatus(
+    inflightId,
+    UpdateTransactionStatus.create().status("commit").reference("commit-" + inflightId));
+
+blnk.transactions().create(
+    CreateTransactions.create()
+        .amount(50)
+        .precision(100)
+        .currency("USD")
+        .reference("ref_overdraft_001")
+        .description("Card spend")
+        .source(balanceId)
+        .destination("@CardSettlement")
+        .allowOverdraft(true)
+        .overdraftLimit(200)); // the source may go down to -$200
+```
+
 List monitors for one balance (`GET /balance-monitors/balances/:balance_id`; Core
 since ~0.14.x). The id is percent-encoded. `list()` still returns every monitor:
 
@@ -251,6 +345,14 @@ are programmer errors: constructing a client without a `baseUrl`
 ```sh
 mvn test                 # offline unit tests (live suites skip unless BLNK_E2E=1)
 BLNK_E2E=1 mvn test      # also runs integration + e2e against http://localhost:5001
+```
+
+`Core0159IntegrationTest` is also run in CI against a real `ghcr.io/blnkfinance/blnk:0.15.9`
+(`.github/workflows/integration-core.yml`). To run it locally against another Core:
+
+```sh
+BLNK_E2E=1 BLNK_BASE_URL=http://localhost:5001 BLNK_API_KEY=<secret_key> \
+  mvn test -Dtest=Core0159IntegrationTest
 ```
 
 A Postman collection for the Core 0.15.3 flows is in
