@@ -425,6 +425,96 @@ class Core0159GapsTest {
       assertEquals("overdraft_limit must be zero or more.", response.message());
       assertEquals(0, h.requestCount());
     }
+
+    private CreateTransactions overdraftTxn(String reference, double limit) {
+      return CreateTransactions.create()
+          .amount(50)
+          .precision(100)
+          .currency("USD")
+          .reference(reference)
+          .description("Overdraft test")
+          .source("bln_src")
+          .destination("bln_dst")
+          .allowOverdraft(true)
+          .overdraftLimit(limit);
+    }
+
+    @Test
+    @DisplayName("create rejects a NaN or infinite overdraft_limit without sending")
+    void createRejectsNonFiniteOverdraftLimit() {
+      Harness h = new Harness("{}");
+
+      for (double bad : new double[] {
+          Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY}) {
+        ApiResponse<JsonNode> response =
+            h.blnk.transactions().create(overdraftTxn("ref_bad_" + bad, bad));
+        assertEquals(400, response.status(), String.valueOf(bad));
+        assertEquals("overdraft_limit must be a number if provided.", response.message());
+      }
+      assertEquals(0, h.requestCount());
+    }
+
+    @Test
+    @DisplayName("createBulk rejects a negative, NaN or infinite overdraft_limit on any item")
+    void createBulkRejectsBadOverdraftLimit() {
+      Harness h = new Harness("{}");
+      Map<Double, String> cases = new java.util.LinkedHashMap<>();
+      cases.put(-1.0, "overdraft_limit must be zero or more.");
+      cases.put(Double.NaN, "overdraft_limit must be a number if provided.");
+      cases.put(Double.POSITIVE_INFINITY, "overdraft_limit must be a number if provided.");
+
+      cases.forEach((bad, message) -> {
+        ApiResponse<JsonNode> response = h.blnk.transactions().createBulk(
+            com.blnkfinance.blnk.types.BulkTransactions.create()
+                .transactions(List.of(
+                    overdraftTxn("ref_bulk_ok", 200),
+                    overdraftTxn("ref_bulk_bad", bad))));
+        assertEquals(400, response.status(), String.valueOf(bad));
+        assertEquals("Transaction at index 1: " + message, response.message());
+      });
+      assertEquals(0, h.requestCount());
+    }
+
+    @Test
+    @DisplayName("createBulk sends overdraft_limit on each item")
+    void createBulkSendsOverdraftLimit() {
+      Harness h = new Harness("{\"batch_id\":\"bulk_1\",\"status\":\"applied\"}");
+
+      ApiResponse<JsonNode> response = h.blnk.transactions().createBulk(
+          com.blnkfinance.blnk.types.BulkTransactions.create()
+              .transactions(List.of(overdraftTxn("ref_bulk_a", 200), overdraftTxn("ref_bulk_b", 0))));
+
+      assertEquals(200, response.status(), response.message());
+      assertEquals(200.0, h.body().get("transactions").get(0).get("overdraft_limit").asDouble());
+      assertEquals(0.0, h.body().get("transactions").get(1).get("overdraft_limit").asDouble());
+    }
+
+    @Test
+    @DisplayName("updateStatus rejects a blank or whitespace-only reference on commit and void")
+    void inflightRejectsBlankReference() {
+      Harness h = new Harness("{}");
+
+      for (String status : new String[] {"commit", "void"}) {
+        for (String blank : new String[] {"", " ", "\t\n"}) {
+          ApiResponse<JsonNode> response = h.blnk.transactions().updateStatus(
+              "txn_1", UpdateTransactionStatus.create().status(status).reference(blank));
+          assertEquals(400, response.status(), status + " [" + blank + "]");
+          assertEquals("reference must be a non-empty string if provided.", response.message());
+        }
+      }
+      assertEquals(0, h.requestCount());
+    }
+
+    @Test
+    @DisplayName("updateStatus sends reference on void")
+    void inflightVoidSendsReference() {
+      Harness h = new Harness("{\"status\":\"VOID\"}");
+
+      h.blnk.transactions().updateStatus(
+          "txn_1", UpdateTransactionStatus.create().status("void").reference("void-txn_1-1"));
+
+      assertEquals(json("{\"status\":\"void\",\"reference\":\"void-txn_1-1\"}"), h.body());
+    }
   }
 
   @Nested

@@ -810,8 +810,12 @@ public final class TransactionValidators {
       return "dry_run must be a boolean if provided.";
     }
 
-    if (data.containsKey("reference") && !StringUtils.isValidString(data.get("reference"))) {
-      return "reference must be a string if provided.";
+    // Core treats "" as "no reference" and generates a random one, so the
+    // commit or void would not be idempotent; a whitespace-only key is almost
+    // certainly a caller bug too.
+    if (data.containsKey("reference")
+        && !(data.get("reference") instanceof String reference && !reference.isBlank())) {
+      return "reference must be a non-empty string if provided.";
     }
 
     List<String> allowedFields = List.of(

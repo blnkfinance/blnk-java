@@ -347,6 +347,14 @@ mvn test                 # offline unit tests (live suites skip unless BLNK_E2E=
 BLNK_E2E=1 mvn test      # also runs integration + e2e against http://localhost:5001
 ```
 
+`Core0159IntegrationTest` is also run in CI against a real `ghcr.io/blnkfinance/blnk:0.15.9`
+(`.github/workflows/integration-core.yml`). To run it locally against another Core:
+
+```sh
+BLNK_E2E=1 BLNK_BASE_URL=http://localhost:5001 BLNK_API_KEY=<secret_key> \
+  mvn test -Dtest=Core0159IntegrationTest
+```
+
 A Postman collection for the Core 0.15.3 flows is in
 `postman/blnk-java-core-0.15.3.postman_collection.json`. Import it, set
 `baseUrl` and `apiKey`, then run the collection.

@@ -171,6 +171,45 @@ class Core0159IntegrationTest {
   }
 
   @Test
+  @DisplayName("a fractional threshold round-trips through create, get, list and updatePartial")
+  void fractionalMonitorValueReadsBack() {
+    String balanceId = createBalance(createLedger("0.15.9 fractional monitor"), null);
+
+    ApiResponse<JsonNode> created =
+        client
+            .balanceMonitor()
+            .create(
+                MonitorData.create()
+                    .balanceId(balanceId)
+                    .condition(
+                        MonitorCondition.create()
+                            .field("balance")
+                            .operator(">=")
+                            .value(100.5)
+                            .precision(100)));
+    assertEquals(201, created.status(), created.message());
+    String monitorId = created.data().get("monitor_id").asText();
+
+    JsonNode stored = getMonitor(monitorId);
+    assertEquals(100.5, stored.get("condition").get("value").asDouble());
+    assertEquals(10050L, stored.get("condition").get("precise_value").asLong());
+
+    ApiResponse<JsonNode> listed = client.balanceMonitor().listByBalanceId(balanceId);
+    assertEquals(200, listed.status(), listed.message());
+    assertEquals(100.5, listed.data().get(0).get("condition").get("value").asDouble());
+
+    ApiResponse<JsonNode> moved =
+        client
+            .balanceMonitor()
+            .updatePartial(
+                monitorId, UpdateMonitorData.create().condition(MonitorCondition.create().value(250.75)));
+    assertEquals(200, moved.status(), moved.message());
+    stored = getMonitor(monitorId);
+    assertEquals(250.75, stored.get("condition").get("value").asDouble());
+    assertEquals(25075L, stored.get("condition").get("precise_value").asLong());
+  }
+
+  @Test
   @DisplayName("inflight commit with a reference applies once")
   void inflightCommitReferenceIsIdempotent() {
     String ledgerId = createLedger("0.15.9 inflight");

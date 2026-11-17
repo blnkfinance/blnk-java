@@ -43,9 +43,12 @@
     `precision` that isn't a finite number above 0.
   - `UpdateTransactionStatus.reference(...)` for idempotent inflight commit and
     void (Core 0.15.7+). Before, the validator rejected `reference` as an
-    unknown field.
-  - `CreateTransactions.overdraftLimit(...)`, in major units. Negative values
-    return a `400`.
+    unknown field. A blank or whitespace-only reference returns a `400`,
+    because Core treats an empty one as "no reference" and the call would not
+    be idempotent.
+  - `CreateTransactions.overdraftLimit(...)`, in major units. A negative, NaN
+    or infinite value returns a `400`, on `create` and on every `createBulk`
+    item.
   - `GetBalanceRequest.include(...)` with `INCLUDE_IDENTITY` / `INCLUDE_LEDGER`,
     sent as repeated `include` query parameters.
 
