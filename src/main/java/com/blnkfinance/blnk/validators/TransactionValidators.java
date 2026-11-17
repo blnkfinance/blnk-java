@@ -812,10 +812,15 @@ public final class TransactionValidators {
 
     // Core treats "" as "no reference" and generates a random one, so the
     // commit or void would not be idempotent; a whitespace-only key is almost
-    // certainly a caller bug too.
-    if (data.containsKey("reference")
-        && !(data.get("reference") instanceof String reference && !reference.isBlank())) {
-      return "reference must be a non-empty string if provided.";
+    // certainly a caller bug too. Core compares keys exactly, so "ref" and
+    // "ref " would be two different idempotency keys: reject padding as well.
+    if (data.containsKey("reference")) {
+      if (!(data.get("reference") instanceof String reference && !reference.isBlank())) {
+        return "reference must be a non-empty string if provided.";
+      }
+      if (!reference.equals(reference.strip())) {
+        return "reference must not have leading or trailing whitespace.";
+      }
     }
 
     List<String> allowedFields = List.of(

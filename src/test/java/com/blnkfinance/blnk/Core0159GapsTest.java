@@ -506,6 +506,28 @@ class Core0159GapsTest {
     }
 
     @Test
+    @DisplayName("updateStatus rejects a reference with leading or trailing whitespace")
+    void inflightRejectsPaddedReference() {
+      Harness h = new Harness("{}");
+
+      for (String status : new String[] {"commit", "void"}) {
+        for (String padded : new String[] {"ref ", " ref", "ref\n", "\tref"}) {
+          ApiResponse<JsonNode> response = h.blnk.transactions().updateStatus(
+              "txn_1", UpdateTransactionStatus.create().status(status).reference(padded));
+          assertEquals(400, response.status(), status + " [" + padded + "]");
+          assertEquals(
+              "reference must not have leading or trailing whitespace.", response.message());
+        }
+      }
+      assertEquals(0, h.requestCount());
+
+      // Inner whitespace is part of the key and is allowed.
+      h.blnk.transactions().updateStatus(
+          "txn_1", UpdateTransactionStatus.create().status("commit").reference("order 42"));
+      assertEquals(json("{\"status\":\"commit\",\"reference\":\"order 42\"}"), h.body());
+    }
+
+    @Test
     @DisplayName("updateStatus sends reference on void")
     void inflightVoidSendsReference() {
       Harness h = new Harness("{\"status\":\"VOID\"}");

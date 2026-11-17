@@ -45,7 +45,8 @@
     void (Core 0.15.7+). Before, the validator rejected `reference` as an
     unknown field. A blank or whitespace-only reference returns a `400`,
     because Core treats an empty one as "no reference" and the call would not
-    be idempotent.
+    be idempotent. So does one with leading or trailing whitespace: Core
+    compares keys exactly, so `"ref"` and `"ref "` would be different keys.
   - `CreateTransactions.overdraftLimit(...)`, in major units. A negative, NaN
     or infinite value returns a `400`, on `create` and on every `createBulk`
     item.

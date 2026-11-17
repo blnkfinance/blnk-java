@@ -64,7 +64,9 @@ public final class UpdateTransactionStatus {
    * Idempotency key for this commit or void (Core 0.15.7+). Repeating the
    * request with the same reference returns the original result instead of
    * applying it again; reusing it with a different amount is a conflict. A
-   * blank or whitespace-only reference returns a {@code 400} without sending.
+   * blank reference, or one with leading or trailing whitespace (Core compares
+   * keys exactly, so {@code "ref"} and {@code "ref "} would differ), returns a
+   * {@code 400} without sending.
    */
   public UpdateTransactionStatus reference(String reference) {
     fields.put("reference", reference);
