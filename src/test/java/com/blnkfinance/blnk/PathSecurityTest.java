@@ -363,6 +363,72 @@ class PathSecurityTest {
     assertEquals(List.of(), received);
   }
 
+  /**
+   * References keep {@code %} (they are free-form), so a reference can carry
+   * an encoding that only becomes {@code ..} after a second or third decode by
+   * a proxy chain. None of these may reach the server.
+   */
+  private static final List<String> MULTI_ENCODED_REFERENCES = List.of(
+      "%2e%2e/%2e%2e/search/reindex",
+      "%2E%2e/%2e%2E/search/reindex",
+      "%252e%252e/%252e%252e/search/reindex",
+      "%252E%252e%252Fsearch%252Freindex",
+      "%25252e%25252e/secret",
+      "%2525252e%2525252E/secret",
+      "..%2fsearch%2freindex",
+      "a/%2e%2e/b",
+      "%2e%2e",
+      "%2e",
+      ".%2e",
+      "%2e%2e%3fx",
+      "%2e%2e%23x",
+      "%2e%2e;x");
+
+  @Test
+  @DisplayName("getByReference refuses references that decode to dot segments at any layer (Core and Cloud Proxy)")
+  void getByReferenceRefusesMultiEncodedDotSegments() {
+    List<String> failures = new ArrayList<>();
+    for (String base : List.of("core", "proxy")) {
+      Blnk blnk = base.equals("core") ? coreClient() : proxyClient();
+      for (String reference : MULTI_ENCODED_REFERENCES) {
+        received.clear();
+        ApiResponse<JsonNode> response = blnk.transactions().getByReference(reference);
+        if (!received.isEmpty() || response.status() != 400) {
+          failures.add(base + " getByReference(\"" + reference + "\") -> " + response.status()
+              + " sent " + received);
+        }
+      }
+    }
+    assertTrue(failures.isEmpty(), String.join("\n  ", failures));
+  }
+
+  @Test
+  @DisplayName("getByReference still sends references whose % never decodes to a dot segment")
+  void getByReferenceKeepsHarmlessPercent() {
+    Blnk blnk = proxyClient();
+    assertEquals(200, blnk.transactions().getByReference("100%").status());
+    assertEquals(200, blnk.transactions().getByReference("a%2Fb").status());
+    assertEquals(200, blnk.transactions().getByReference("v1.2..3").status());
+    assertEquals(List.of(
+        "GET /proxy/transactions/reference/100%25",
+        "GET /proxy/transactions/reference/a%252Fb",
+        "GET /proxy/transactions/reference/v1.2..3"), received);
+  }
+
+  @Test
+  @DisplayName("The request layer refuses double- and triple-encoded dot segments")
+  void requestLayerRefusesMultiEncodedDotSegments() {
+    for (Blnk blnk : List.of(coreClient(), proxyClient())) {
+      for (String endpoint : List.of(
+          "transactions/reference/%252e%252e%252Fsearch%252Freindex",
+          "ledgers/%252E%252e/x", "ledgers/%25252e%25252e/x")) {
+        ApiResponse<JsonNode> response = blnk.request(endpoint, null, "GET", null);
+        assertEquals(400, response.status(), endpoint);
+      }
+    }
+    assertEquals(List.of(), received);
+  }
+
   @Test
   @DisplayName("The request layer refuses encoded and plain dot segments on both bases")
   void requestLayerRefusesDotSegments() {
@@ -394,5 +460,15 @@ class PathSecurityTest {
     assertEquals("a%2Fb%25", PathSegments.reference("a/b%"));
     assertFalse(PathSegments.hasDotSegment("ledgers/..a/x?q=../y"));
     assertTrue(PathSegments.hasDotSegment("ledgers/%2e%2e"));
+    assertTrue(PathSegments.hasDotSegment("ledgers/%252e%252E"));
+    assertFalse(PathSegments.hasDotSegment("transactions/reference/100%25"));
+    // A value still changing after the decode bound is treated as unsafe.
+    String deep = "x";
+    for (int i = 0; i < 12; i++) {
+      deep = deep.replace("%", "%25");
+      deep = i == 0 ? "%78" : deep;
+    }
+    assertTrue(PathSegments.hasDotSegment("ledgers/" + deep));
+    assertThrows(IllegalArgumentException.class, () -> PathSegments.reference("%252e%252e"));
   }
 }

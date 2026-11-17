@@ -52,29 +52,59 @@ public final class PathSegments {
    * single path segment. Unlike {@link #segment}, {@code /}, {@code %} and the
    * other reserved characters are escaped rather than rejected, because
    * references may legitimately contain them. Null, empty, {@code .} and
-   * {@code ..} are still rejected, because escaping leaves dots unchanged.
+   * {@code ..} are still rejected, because escaping leaves dots unchanged, and
+   * so is any value that contains a dot segment once percent-decoded any
+   * number of times (for example {@code %2e%2e/x} or {@code %252e%252e}): a
+   * proxy chain that decodes more than once would otherwise turn it into
+   * {@code ../x}.
    */
   public static String reference(String value) {
     rejectEmptyOrDot(value);
+    if (hasDotSegment(value)) {
+      throw new InvalidPathSegmentException(
+          "invalid path segment " + quote(value) + ": must not decode to a . or .. segment");
+    }
     return UriEncoding.encodePathSegment(value);
   }
+
+  /** How many decoding layers {@link #hasDotSegment} unwraps before giving up. */
+  static final int MAX_DECODE_ROUNDS = 8;
 
   /**
    * True when the path part of {@code pathOrUrl} (everything before the
    * first {@code ?} or {@code #}) contains a {@code .} or {@code ..} segment
-   * once percent-decoded, so {@code %2e%2e} counts the same as {@code ..}.
+   * at any decoding layer. The path is percent-decoded repeatedly until it
+   * stops changing, so {@code %2e%2e}, {@code %2E%2e} and double-encoded
+   * {@code %252e%252e} all count the same as {@code ..}: a server or a chain
+   * of proxies may decode more than once before normalizing. A path that
+   * still changes after {@link #MAX_DECODE_ROUNDS} decodes is treated as
+   * unsafe. In decoded layers {@code ?}, {@code #} and {@code ;} also end a
+   * segment, because a later hop may read them as delimiters.
    */
   public static boolean hasDotSegment(String pathOrUrl) {
     if (pathOrUrl == null) {
       return false;
     }
-    String path = pathOrUrl;
-    int cut = indexOfAny(path, '?', '#');
+    String layer = pathOrUrl;
+    int cut = indexOfAny(layer, '?', '#');
     if (cut >= 0) {
-      path = path.substring(0, cut);
+      layer = layer.substring(0, cut);
     }
-    String decoded = percentDecode(path);
-    for (String part : decoded.split("[/\\\\]", -1)) {
+    for (int round = 0; round <= MAX_DECODE_ROUNDS; round++) {
+      if (containsDotSegment(layer)) {
+        return true;
+      }
+      String next = percentDecode(layer);
+      if (next.equals(layer)) {
+        return false;
+      }
+      layer = next;
+    }
+    return true;
+  }
+
+  private static boolean containsDotSegment(String path) {
+    for (String part : path.split("[/\\?#;]", -1)) {
       if (part.equals(".") || part.equals("..")) {
         return true;
       }

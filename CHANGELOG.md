@@ -14,8 +14,11 @@
 - The request layer refuses `.` and `..` path segments, including
   percent-encoded ones such as `%2e%2e`, so a path cannot escape the Core or
   Cloud Proxy (`/proxy/`) base URL.
+- The dot-segment check percent-decodes repeatedly until the path stops
+  changing, so double- and triple-encoded forms such as `%252e%252e` are
+  refused too, in case a proxy chain decodes more than once.
 - `Transactions.getByReference` still escapes `/` and `%` in references, and
-  now rejects `.` and `..`.
+  now rejects `.`, `..`, and any reference that decodes to a dot segment.
 
 ### Added
 
