@@ -7,6 +7,7 @@ import com.blnkfinance.blnk.types.ApiResponse;
 import com.blnkfinance.blnk.types.ListOptions;
 import com.blnkfinance.blnk.types.CreateLedger;
 import com.blnkfinance.blnk.types.UpdateLedger;
+import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.validators.LedgerValidators;
 import com.blnkfinance.blnk.validators.ListValidators;
@@ -44,12 +45,20 @@ public class Ledgers {
   }
 
   /**
-   * Retrieves a ledger — {@code GET ledgers/{id}}, no body. Note: unlike the
-   * other methods, there is no id validation and NO try/catch here — an error
-   * thrown by the request layer PROPAGATES to the caller.
+   * Retrieves a ledger — {@code GET ledgers/{id}}, no body. The id is
+   * validated and URL-encoded; an invalid id returns {@code 400} and no
+   * request is sent. Note: unlike the other methods there is NO try/catch
+   * around the request — an error thrown by the request layer PROPAGATES to
+   * the caller.
    */
   public ApiResponse<JsonNode> get(String id) {
-    return request.call("ledgers/" + id, null, "GET", null);
+    String segment;
+    try {
+      segment = PathSegments.segment(id);
+    } catch (PathSegments.InvalidPathSegmentException error) {
+      return formatResponse.format(400, error.getMessage(), null, null);
+    }
+    return request.call("ledgers/" + segment, null, "GET", null);
   }
 
   /** Lists ledgers — {@code GET ledgers}, Core default page. */
@@ -95,7 +104,7 @@ public class Ledgers {
         return formatResponse.format(400, error, null, null);
       }
 
-      return request.call("ledgers/" + id, data.toJson(), "PUT", null);
+      return request.call("ledgers/" + PathSegments.segment(id), data.toJson(), "PUT", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "update");
     }

@@ -8,7 +8,6 @@ import com.blnkfinance.blnk.types.ApiResponse;
 import com.blnkfinance.blnk.types.MonitorCondition;
 import com.blnkfinance.blnk.types.MonitorData;
 import com.blnkfinance.blnk.util.HttpClientUtils;
-import com.blnkfinance.blnk.util.UriEncoding;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -19,7 +18,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /** Unit tests for the BalanceMonitor service: create, get, list, and update flows. */
@@ -172,8 +170,8 @@ class BalanceMonitorsTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"bln/a", "bln?x=1", "bln#frag"})
-    @DisplayName("listByBalanceId percent-encodes /, ?, and # in the path id")
-    void listByBalanceIdPercentEncodesReservedIdChars(String balanceId) {
+    @DisplayName("listByBalanceId rejects /, ?, and # in the path id without sending a request")
+    void listByBalanceIdRejectsReservedIdChars(String balanceId) {
       BlnkLogger mockLogger = TestMocks.createMockLogger();
       BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
       CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
@@ -182,17 +180,27 @@ class BalanceMonitorsTest {
 
       ApiResponse<JsonNode> response = balanceMonitor.listByBalanceId(balanceId);
 
-      String encoded = UriEncoding.encodePathSegment(balanceId);
+      assertEquals(400, response.status());
+      assertEquals(0, capturedRequest.calls.size());
+    }
+
+    @Test
+    @DisplayName("listByBalanceId percent-encodes a space and @ in the path id")
+    void listByBalanceIdPercentEncodesSpace() {
+      BlnkLogger mockLogger = TestMocks.createMockLogger();
+      BlnkRequest thirdPartyRequest = TestMocks.createMockBlnkRequest(true, null, 200);
+      CapturingRequest capturedRequest = CapturingRequest.of(thirdPartyRequest);
+      BalanceMonitor balanceMonitor =
+          new BalanceMonitor(capturedRequest, mockLogger, HttpClientUtils.FORMAT_RESPONSE);
+
+      ApiResponse<JsonNode> response = balanceMonitor.listByBalanceId("bln a@b");
+
       assertEquals(200, response.status());
       assertEquals(
           List.of(
               new CapturingRequest.Call(
-                  "balance-monitors/balances/" + encoded, null, "GET", null)),
+                  "balance-monitors/balances/bln%20a%40b", null, "GET", null)),
           capturedRequest.calls);
-      String lastSegment = capturedRequest.calls.get(0).endpoint().split("balances/", 2)[1];
-      assertFalse(lastSegment.contains("/"));
-      assertFalse(lastSegment.contains("?"));
-      assertFalse(lastSegment.contains("#"));
     }
 
     @Test

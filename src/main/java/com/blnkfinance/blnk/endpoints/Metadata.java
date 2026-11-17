@@ -5,6 +5,7 @@ import com.blnkfinance.blnk.BlnkRequest;
 import com.blnkfinance.blnk.FormatResponseFn;
 import com.blnkfinance.blnk.types.ApiResponse;
 import com.blnkfinance.blnk.types.UpdateMetadataData;
+import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.validators.MetadataValidators;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -28,7 +29,7 @@ public class Metadata {
   /**
    * Updates an entity's metadata — {@code POST {id}/metadata}. Note: the HTTP
    * method is POST (not PUT or PATCH), and the caller-supplied entity id
-   * forms the leading path segment RAW — it is validated but NOT URL-encoded.
+   * forms the leading path segment — it is validated and URL-encoded.
    * Validates, then forwards {@code data} unmodified. Never throws: runtime
    * errors are converted to an error response, reported under the name
    * {@code "update"}.
@@ -41,7 +42,7 @@ public class Metadata {
         return formatResponse.format(400, validatorResponse, null, null);
       }
 
-      return request.call(id + "/metadata", data.toJson(), "POST", null);
+      return request.call(PathSegments.segment(id) + "/metadata", data.toJson(), "POST", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "update");
     }

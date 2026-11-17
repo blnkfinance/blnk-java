@@ -8,14 +8,15 @@ import com.blnkfinance.blnk.types.CreateApiKeyData;
 import com.blnkfinance.blnk.types.DeleteApiKeyOptions;
 import com.blnkfinance.blnk.types.ListApiKeysOptions;
 import com.blnkfinance.blnk.util.UriEncoding;
+import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.validators.ApiKeyValidators;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * Endpoint service for API key management. Note the URL-encoding asymmetry
- * with {@link Hooks}: here BOTH the id path segment and the owner query value
- * are URL-encoded before being placed in the endpoint.
+ * Endpoint service for API key management.
+ * The id path segment is validated and URL-encoded with
+ * {@link PathSegments#segment}; the owner query value is URL-encoded.
  */
 public class ApiKeys {
 
@@ -105,7 +106,7 @@ public class ApiKeys {
         return formatResponse.format(400, validatorResponse, null, null);
       }
 
-      String endpoint = "api-keys/" + UriEncoding.encodePathSegment(id);
+      String endpoint = "api-keys/" + PathSegments.segment(id);
       if (options != null && options.toMap().containsKey("owner")) {
         endpoint +=
             "?owner=" + UriEncoding.encodePathSegment((String) options.toMap().get("owner"));

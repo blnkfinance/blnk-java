@@ -5,7 +5,7 @@ import com.blnkfinance.blnk.BlnkRequest;
 import com.blnkfinance.blnk.FormatResponseFn;
 import com.blnkfinance.blnk.types.ApiResponse;
 import com.blnkfinance.blnk.types.MonitorData;
-import com.blnkfinance.blnk.util.UriEncoding;
+import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.validators.BalanceMonitorValidators;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -50,13 +50,13 @@ public class BalanceMonitor {
 
   /**
    * Retrieves a balance monitor — {@code GET balance-monitors/{id}}. The id is
-   * interpolated raw, with no validation and no URL-encoding; no body. Never
+   * validated and URL-encoded; an empty id returns {@code 400}; no body. Never
    * throws: runtime errors are converted to an error response, reported under
    * the name {@code "get"}.
    */
   public ApiResponse<JsonNode> get(String id) {
     try {
-      return request.call("balance-monitors/" + id, null, "GET", null);
+      return request.call("balance-monitors/" + PathSegments.segment(id), null, "GET", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "get");
     }
@@ -89,7 +89,7 @@ public class BalanceMonitor {
         return formatResponse.format(400, "balance id is required", null, null);
       }
       return request.call(
-          "balance-monitors/balances/" + UriEncoding.encodePathSegment(balanceId),
+          "balance-monitors/balances/" + PathSegments.segment(balanceId),
           null,
           "GET",
           null);
@@ -100,7 +100,7 @@ public class BalanceMonitor {
 
   /**
    * Updates a balance monitor — {@code PUT balance-monitors/{id}}. Validates
-   * the data only (the id is neither validated nor URL-encoded), then forwards
+   * the data, then validates and URL-encodes the id, then forwards
    * {@code data} unmodified. Never throws: runtime errors are converted to an
    * error response, reported under the name {@code "update"}.
    */
@@ -111,7 +111,8 @@ public class BalanceMonitor {
       if (validatorResponse != null) {
         return formatResponse.format(400, validatorResponse, null, null);
       }
-      return request.call("balance-monitors/" + id, data.toJson(), "PUT", null);
+      return request.call(
+          "balance-monitors/" + PathSegments.segment(id), data.toJson(), "PUT", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "update");
     }
@@ -131,7 +132,7 @@ public class BalanceMonitor {
       }
 
       return request.call(
-          "balance-monitors/" + UriEncoding.encodePathSegment(id), null, "DELETE", null);
+          "balance-monitors/" + PathSegments.segment(id), null, "DELETE", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "delete");
     }

@@ -21,6 +21,7 @@ import com.blnkfinance.blnk.util.HttpClientUtils;
 import com.blnkfinance.blnk.util.ValueFormat;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.util.MultipartBody;
+import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.RequestRetry;
 import com.blnkfinance.blnk.util.SafeLogMeta;
 import com.blnkfinance.blnk.util.UriEncoding;
@@ -171,6 +172,16 @@ public final class Blnk {
         UriEncoding.appendQueryParam(
             this.options.baseUrl() + endpoint, "instance_id", this.options.instanceId());
 
+    // Refuse "." and ".." path segments, including percent-encoded ones such
+    // as "%2e%2e", before anything is sent. A server or proxy that decodes
+    // and normalizes the path would otherwise route the request (and the
+    // X-Blnk-Key header) outside the configured base, e.g. out of a Cloud
+    // Proxy "/proxy/" base.
+    if (PathSegments.hasDotSegment(endpoint) || PathSegments.hasDotSegment(urlPath(url))) {
+      return formatResponse.format(
+          400, "endpoint escapes the configured base URL", null, null);
+    }
+
     for (int attempt = 1; attempt <= maxAttempts; attempt++) {
       if (attempt > 1) {
         double delayMs = RequestRetry.retryDelayForAttempt(attempt - 1, retryDelayMs);
@@ -249,6 +260,13 @@ public final class Blnk {
     // this is unreachable in practice.
     return formatResponse.format(
         500, "Request failed after " + maxAttempts + " attempts", null, null);
+  }
+
+  /** The path, query and fragment of {@code url}: everything after the authority. */
+  private static String urlPath(String url) {
+    int scheme = url.indexOf("://");
+    int start = scheme >= 0 ? url.indexOf('/', scheme + 3) : 0;
+    return start < 0 ? "" : url.substring(start);
   }
 
   /**

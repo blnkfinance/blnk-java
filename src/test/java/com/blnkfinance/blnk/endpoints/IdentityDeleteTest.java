@@ -65,12 +65,27 @@ class IdentityDeleteTest {
     Identity identity =
         new Identity(capturedRequest, mockLogger, HttpClientUtils.FORMAT_RESPONSE);
 
-    identity.delete("idt_test/special");
+    identity.delete("idt_test special");
 
     assertEquals(
         List.of(
-            new CapturingRequest.Call("identities/idt_test%2Fspecial", null, "DELETE", null)),
+            new CapturingRequest.Call("identities/idt_test%20special", null, "DELETE", null)),
         capturedRequest.calls);
+  }
+
+  @Test
+  @DisplayName("delete rejects an identity id containing / without sending a request")
+  void deleteRejectsIdentityIdWithSlash() {
+    BlnkLogger mockLogger = TestMocks.createMockLogger();
+    CapturingRequest capturedRequest =
+        CapturingRequest.of(respond(200, "Success", deleteResponse()));
+    Identity identity =
+        new Identity(capturedRequest, mockLogger, HttpClientUtils.FORMAT_RESPONSE);
+
+    ApiResponse<JsonNode> response = identity.delete("idt_test/special");
+
+    assertEquals(400, response.status());
+    assertEquals(List.of(), capturedRequest.calls);
   }
 
   @Test

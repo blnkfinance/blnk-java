@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Security
+
+- Caller-supplied path values (resource IDs, balance indicator and currency,
+  tokenize/detokenize field names, the search collection and the metadata
+  entity ID) are now validated and percent-encoded before they go into the
+  URL. A value that is empty, `.` or `..`, or contains `/ \ ? # %` or a
+  control character returns a `400` and no request is sent. Before, an ID such
+  as `../search/reindex` could send the client's `X-Blnk-Key` to a different
+  Core route.
+- The request layer refuses `.` and `..` path segments, including
+  percent-encoded ones such as `%2e%2e`, so a path cannot escape the Core or
+  Cloud Proxy (`/proxy/`) base URL.
+- `Transactions.getByReference` still escapes `/` and `%` in references, and
+  now rejects `.` and `..`.
+
 ### Added
 
 - Optional `instanceId` on `BlnkClientOptions` for [Cloud Proxy API](https://docs.blnkfinance.com/cloud/reference/proxy-api)

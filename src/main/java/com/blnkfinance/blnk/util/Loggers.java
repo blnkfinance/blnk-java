@@ -35,7 +35,10 @@ public final class Loggers {
   };
 
   /**
-   * Converts a caught failure into a terminal 500 response:
+   * Converts a caught failure into a terminal response. A caller-supplied
+   * value rejected by {@link PathSegments} becomes {@code (400, message, null)}
+   * without logging, like any other validation failure, and no request is
+   * sent. Anything else becomes a 500:
    * <ol>
    *   <li>{@code logger.error(fnName, ...safeLogMeta(error))};</li>
    *   <li>Throwable → {@code (500, error message, null)};</li>
@@ -45,6 +48,9 @@ public final class Loggers {
    */
   public static ApiResponse<JsonNode> handleError(
       Object error, BlnkLogger logger, FormatResponseFn formatResponse, String fnName) {
+    if (error instanceof PathSegments.InvalidPathSegmentException invalid) {
+      return formatResponse.format(400, invalid.getMessage(), null, null);
+    }
     logger.error(fnName, SafeLogMeta.safeLogMeta(error));
     if (error instanceof Throwable t) {
       return formatResponse.format(500, t.getMessage(), null, null);

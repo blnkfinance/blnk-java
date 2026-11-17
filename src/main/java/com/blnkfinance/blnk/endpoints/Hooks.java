@@ -6,14 +6,15 @@ import com.blnkfinance.blnk.FormatResponseFn;
 import com.blnkfinance.blnk.types.ApiResponse;
 import com.blnkfinance.blnk.types.CreateHookData;
 import com.blnkfinance.blnk.types.ListHooksOptions;
+import com.blnkfinance.blnk.util.PathSegments;
 import com.blnkfinance.blnk.util.Loggers;
 import com.blnkfinance.blnk.validators.HookValidators;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * Endpoint service for webhook management. Note the URL-encoding asymmetry
- * with {@link ApiKeys}: Hooks NEVER encodes ids or the type query value —
- * both are placed in the endpoint as-is.
+ * Endpoint service for webhook management. Hook ids are validated and
+ * percent-encoded with {@link PathSegments#segment}; the type query value is
+ * placed in the endpoint as-is after validation.
  */
 public class Hooks {
 
@@ -78,14 +79,14 @@ public class Hooks {
     }
   }
 
-  /** Retrieves a hook — {@code GET hooks/{id}}; the id is NOT URL-encoded. */
+  /** Retrieves a hook — {@code GET hooks/{id}}; the id is validated and URL-encoded. */
   public ApiResponse<JsonNode> get(String id) {
     try {
       if (id == null || id.isEmpty()) {
         return formatResponse.format(400, "hook id is required", null, null);
       }
 
-      return request.call("hooks/" + id, null, "GET", null);
+      return request.call("hooks/" + PathSegments.segment(id), null, "GET", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "get");
     }
@@ -109,20 +110,20 @@ public class Hooks {
         return formatResponse.format(400, validatorResponse, null, null);
       }
 
-      return request.call("hooks/" + id, data.toJson(), "PUT", null);
+      return request.call("hooks/" + PathSegments.segment(id), data.toJson(), "PUT", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "update");
     }
   }
 
-  /** Deletes a hook — {@code DELETE hooks/{id}}; the id is NOT URL-encoded. */
+  /** Deletes a hook — {@code DELETE hooks/{id}}; the id is validated and URL-encoded. */
   public ApiResponse<JsonNode> delete(String id) {
     try {
       if (id == null || id.isEmpty()) {
         return formatResponse.format(400, "hook id is required", null, null);
       }
 
-      return request.call("hooks/" + id, null, "DELETE", null);
+      return request.call("hooks/" + PathSegments.segment(id), null, "DELETE", null);
     } catch (RuntimeException error) {
       return Loggers.handleError(error, logger, formatResponse, "delete");
     }
