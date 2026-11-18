@@ -64,7 +64,7 @@ System.out.println("ledger:  " + newLedger.data());     // parsed JSON body
 ```
 
 Cloud Proxy: same Core methods and bodies, with the Cloud proxy base URL and
-`instanceId`. Cloud routes with `instance_id` ([Proxy API](https://docs.blnkfinance.com/cloud/reference/proxy-api)):
+`instanceId`. Cloud routes with `instance_id` ([Enterprise Proxy](https://docs.blnkfinance.com/reference/enterprise#enterprise-proxy)):
 
 ```java
 Blnk blnk = Blnk.init("<cloud_api_key_or_oauth_token>",
