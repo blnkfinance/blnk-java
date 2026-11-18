@@ -2,16 +2,6 @@
 
 ## 1.7.0 — Core 0.15.9
 
-### Cloud Proxy
-
-Cloud Proxy support shipped in v1.6.0 and remains available in v1.7.0.
-
-- Optional `instanceId` on `BlnkClientOptions` routes requests through Blnk Cloud.
-  Every request includes `instance_id` as a query parameter. Use the Cloud
-  proxy base URL `https://api.cloud.blnkfinance.com/proxy` and a Cloud API key
-  or OAuth token; direct Core clients leave `instanceId` unset. See the
-  [Enterprise Proxy documentation](https://docs.blnkfinance.com/reference/enterprise#enterprise-proxy).
-
 ### Security
 
 - Caller-supplied path values (resource IDs, balance indicator and currency,
@@ -77,6 +67,14 @@ Cloud Proxy support shipped in v1.6.0 and remains available in v1.7.0.
   shows how to page identities with `search().filter(..., "identities")`.
   Core 0.15.9 ignores `limit`/`offset` on `GET /identities` unless filters are
   also sent, so `identity().list()` takes no `ListOptions`.
+
+## 1.6.0 — Cloud Proxy
+
+Cloud Proxy support adds optional `instanceId` to `BlnkClientOptions`. When set,
+every request includes `instance_id` as a query parameter. Use the Cloud proxy
+base URL `https://api.cloud.blnkfinance.com/proxy` and a Cloud API key or OAuth
+token; direct Core clients leave `instanceId` unset. See the [Enterprise Proxy
+documentation](https://docs.blnkfinance.com/reference/enterprise#enterprise-proxy).
 
 ## 1.5.0 — Core 0.15.4
 
