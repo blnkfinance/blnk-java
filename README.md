@@ -20,14 +20,14 @@ Available on [Maven Central](https://central.sonatype.com/artifact/com.blnkfinan
 <dependency>
   <groupId>com.blnkfinance</groupId>
   <artifactId>blnk-java</artifactId>
-  <version>1.6.0</version>
+  <version>1.7.0</version>
 </dependency>
 ```
 
 Gradle:
 
 ```kotlin
-implementation("com.blnkfinance:blnk-java:1.6.0")
+implementation("com.blnkfinance:blnk-java:1.7.0")
 ```
 
 The only runtime dependency is Jackson Databind; HTTP uses the JDK's built-in
@@ -64,7 +64,7 @@ System.out.println("ledger:  " + newLedger.data());     // parsed JSON body
 ```
 
 Cloud Proxy: same Core methods and bodies, with the Cloud proxy base URL and
-`instanceId`. Cloud routes with `instance_id` ([Proxy API](https://docs.blnkfinance.com/cloud/reference/proxy-api)):
+`instanceId`. Cloud routes with `instance_id` ([Enterprise Proxy](https://docs.blnkfinance.com/reference/enterprise#enterprise-proxy)):
 
 ```java
 Blnk blnk = Blnk.init("<cloud_api_key_or_oauth_token>",
